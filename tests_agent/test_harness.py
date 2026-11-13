@@ -71,7 +71,8 @@ def test_approve_books_and_done_needs_complete_world(run_dir: Path, monkeypatch)
 
     saved = state(run_dir)
     assert [b["venue_id"] for b in bookings(run_dir)] == [venue["id"]]
-    assert saved["decision"] == "approve" and saved["attempts"] == 2
+    # Запуск после решения оператора продолжает ту же попытку.
+    assert saved["decision"] == "approve" and saved["attempts"] == 1
     assert saved["status"] == "failed" and "команды без слотов" in saved["reason"]
     assert saved["bulletin"] is None
     assert len(model.calls) == 2 + agent.MAX_NUDGES

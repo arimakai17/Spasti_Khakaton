@@ -52,7 +52,9 @@ def test_crash_after_first_slot_then_relaunch(run_dir: Path, monkeypatch):
     launch(monkeypatch, [step["slots"], step["mail"], step["report"]])
 
     assert_clean_finish(run_dir)
-    assert state(run_dir)["attempts"] == 3
+    # Пауза, одобрение с падением и перезапуск: потрачено две попытки, одна остаётся в запасе.
+    limit = read_json(run_dir / "data" / "config.json")["max_attempts"]
+    assert state(run_dir)["attempts"] == 2 < limit
 
 
 def test_crash_after_first_letter_then_relaunch(run_dir: Path, monkeypatch):

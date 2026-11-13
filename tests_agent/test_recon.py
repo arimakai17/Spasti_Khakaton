@@ -93,6 +93,8 @@ def test_venue_problems_follow_the_regulation():
     one_track = _venue(halls=[Hall(hall_id="H-R", tracks=["red"])])
     assert venue_problems(one_track, _config(), TEAMS) == ["missing_tracks"]
     assert venue_problems(_venue(cost_kzt=1000), _config(), TEAMS) == []
+    loose = _config(slot_conflict_rules={"require_venue_capacity_fit": False})
+    assert venue_problems(_venue(total_capacity=8), loose, TEAMS) == []
 
 
 def test_address_check_takes_one_address_in_allowed_domain():

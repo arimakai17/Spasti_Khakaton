@@ -22,3 +22,7 @@ __pycache__/
 /journal.jsonl
 /sessions.db
 /sessions.db-*
+
+# копии fixtures/ в папках прогонов: их пересоздаёт reset.py, в сдачу они не входят
+/runs/*/data/
+/runs-modified/

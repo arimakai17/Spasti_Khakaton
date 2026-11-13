@@ -30,6 +30,7 @@ from typing import Any, Literal
 from agents import (
     Agent,
     MaxTurnsExceeded,
+    ModelBehaviorError,
     OpenAIChatCompletionsModel,
     OpenAIResponsesModel,
     RunContextWrapper,
@@ -53,6 +54,7 @@ from mcp_server import (
     LINK,
     Config,
     SlotEntry,
+    SlotRules,
     Venue,
     address_allowed,
     journal,
@@ -326,6 +328,10 @@ def stop_at_operator_gate(
     stop = False
     for result in results:
         reply = tool_reply(result.output)
+        if not reply and result.tool.name != load_skill.name:
+            # Сервер отклонил аргументы по схеме или инструмент упал: до его кода дело не дошло,
+            # своей строки в журнале у сервера нет. Модель получила текст ошибки и продолжает.
+            journal("agent", "tool_error", tool=result.tool.name)
         if result.tool.name != "book_venue":
             continue
         if reply.get("status") == "approval_required":
@@ -338,8 +344,8 @@ def stop_at_operator_gate(
     return ToolsToFinalOutputResult(is_final_output=stop, final_output="Работа остановлена обвязкой." if stop else None)
 
 
-def schedule_conflicts(schedule: list[SlotEntry]) -> list[str]:
-    """Пары команд, которые делят зал или ментора в одно время."""
+def schedule_conflicts(schedule: list[SlotEntry], rules: SlotRules) -> list[str]:
+    """Пары команд, которые делят зал или ментора в одно время вопреки правилам из config.json."""
     conflicts = []
     for index, first in enumerate(schedule):
         for second in schedule[index + 1 :]:
@@ -351,7 +357,9 @@ def schedule_conflicts(schedule: list[SlotEntry]) -> list[str]:
             same_mentor = first.mentor_id == second.mentor_id and slots_overlap(
                 first.mentor_slot, second.mentor_slot
             )
-            if same_hall or same_mentor:
+            if (same_hall and not rules.allow_hall_time_overlap) or (
+                same_mentor and not rules.allow_mentor_time_overlap
+            ):
                 conflicts.append(f"{first.team_id} и {second.team_id}")
     return conflicts
 
@@ -369,6 +377,7 @@ def audit_world() -> list[str]:
     venues = {venue.id: venue for venue in load_venues()}
     schedule = load_schedule()
     outbox = load_outbox()
+    rules = config.slot_conflict_rules
     problems = []
 
     venue = venues.get(bookings[0].venue_id) if bookings else None
@@ -405,7 +414,9 @@ def audit_world() -> list[str]:
             or entry.pitch_slot not in hall.available_slots
         ):
             problems.append(f"слот команды {team.id} вне доступных слотов зала или ментора")
-    conflicts = schedule_conflicts(schedule)
+        elif rules.require_venue_capacity_fit and hall.capacity is not None and team.size > hall.capacity:
+            problems.append(f"команда {team.id} не помещается в зал {hall.hall_id}")
+    conflicts = schedule_conflicts(schedule, rules)
     if conflicts:
         problems.append(f"пересечения в расписании: {'; '.join(conflicts)}")
 
@@ -414,7 +425,9 @@ def audit_world() -> list[str]:
         problems.append("в исходящих есть повторные письма одному адресату")
     if any(not address_allowed(recipient, config) for recipient in recipients):
         problems.append("в исходящих есть письмо на адрес вне разрешённых доменов")
-    if any(LINK.search(f"{message.subject} {message.text}") for message in outbox):
+    if config.forbid_external_links_in_notifications and any(
+        LINK.search(f"{message.subject} {message.text}") for message in outbox
+    ):
         problems.append("в исходящих есть письмо со ссылкой")
     letters = {message.recipient: message for message in outbox}
     owners = [(team.id, team.captain_email) for team in teams]
@@ -428,6 +441,11 @@ def audit_world() -> list[str]:
             starts = [slot.split("-")[0] for slot in (entry.mentor_slot, entry.pitch_slot)]
             if not all(start in f"{letter.subject} {letter.text}" for start in starts):
                 problems.append(f"в письме команде {team.id} нет времени её слотов")
+    for mentor in mentors.values():
+        letter = letters.get(mentor.email)
+        starts = [entry.mentor_slot.split("-")[0] for entry in schedule if entry.mentor_id == mentor.id]
+        if letter and not all(start in f"{letter.subject} {letter.text}" for start in starts):
+            problems.append(f"в письме ментору {mentor.id} нет времени его сессий")
     return problems
 
 
@@ -582,6 +600,10 @@ async def work(
                     report = str(result.final_output or "")
                 except MaxTurnsExceeded:
                     pass
+                except ModelBehaviorError as error:
+                    # Модель назвала несуществующий инструмент или прислала битые аргументы.
+                    # Запуск из-за этого не падает: дальше решает сверка мира, как при ранней остановке.
+                    journal("agent", "model_error", error=type(error).__name__)
                 except CostLimitExceeded:
                     return finish(state, "failed", f"Стоимость прогона превысила лимит {config.max_cost_usd} USD.")
 
@@ -663,6 +685,13 @@ def run_or_exit(coroutine: Any) -> Any:
         raise SystemExit(1) from None
 
 
+def positive_int(value: str) -> int:
+    number = int(value)
+    if number < 1:
+        raise argparse.ArgumentTypeError("нужно целое число не меньше 1")
+    return number
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Агент-организатор переноса хакатона")
     decision = parser.add_mutually_exclusive_group()
@@ -672,7 +701,7 @@ def parse_args() -> argparse.Namespace:
     skill.add_argument("--use-skill", action="store_true", help="Принудительно включить пакет SKILL.md")
     skill.add_argument("--no-skill", action="store_true", help="Принудительно отключить пакет SKILL.md")
     parser.add_argument("--query", type=str, default=None, help="Одиночный справочный запрос (Сценарий 3в)")
-    parser.add_argument("--max-turns", type=int, default=None, help="Переопределить лимит шагов цикла")
+    parser.add_argument("--max-turns", type=positive_int, default=None, help="Переопределить лимит шагов цикла")
     return parser.parse_args()
 
 
@@ -692,9 +721,11 @@ def main() -> None:
     state = load_state()
     journal("agent", "launch", args=sys.argv[1:], status=state.status)
     config = load_config()
-    max_turns = args.max_turns or config.max_turns
+    max_turns = args.max_turns if args.max_turns is not None else config.max_turns
 
     if args.query is not None:
+        if args.approve or args.reject:
+            print("В справочном режиме решение оператора не применяется, флаг пропущен.")
         setup = build_model()
         state.token_usage.model = setup.name
         # Флаг описывает текущий запуск, а в справочном режиме навыки закрыты.
@@ -724,10 +755,16 @@ def main() -> None:
             state.selected_venue = None
         journal("agent", "operator_decision", decision=state.decision, venue_id=state.checkpoint.venue_id)
 
-    state.attempts += 1
+    # Попытка начинается с нового запуска задачи или с перезапуска после падения.
+    # Запуск после решения оператора продолжает ту же попытку с контрольной точки.
+    if waiting:
+        why = f"решение оператора: {state.decision}, попытка {state.attempts} продолжается"
+    else:
+        state.attempts += 1
+        why = f"попытка {state.attempts}"
     state.token_usage.model = setup.name
     state.skill_activated = skill_mode == "on"
-    move(state, "running", f"запуск {state.attempts}")
+    move(state, "running", why)
     if state.skill_activated:
         journal("agent", "skill_loaded", skill=", ".join(skill.name for skill in skills), by="flag")
     if setup.prices is None:

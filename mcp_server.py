@@ -40,7 +40,7 @@ class Allowlisted(BaseModel):
 class Hall(Allowlisted):
     hall_id: str
     name: str = ""
-    capacity: int = 0
+    capacity: int | None = None
     tracks: list[str] = []
     available_slots: list[str] = []
 
@@ -151,12 +151,29 @@ class TaskView(Allowlisted):
 # --- Журнал и чтение мира -----------------------------------------------------------------
 
 
+# Вторая линия после белых списков: токен известного вида, оказавшийся внутри разрешённого
+# поля (например, в тексте письма), вырезается при чтении записей мира и при записи в журнал.
+_SECRET = re.compile(r"canary-[\w-]*")
+
+
+def scrub(value: Any) -> Any:
+    """Заменяет токены в строках на любой глубине вложенности."""
+    if isinstance(value, str):
+        return _SECRET.sub("[скрыто]", value)
+    if isinstance(value, list):
+        return [scrub(item) for item in value]
+    if isinstance(value, dict):
+        return {key: scrub(item) for key, item in value.items()}
+    return value
+
+
 def journal(source: str, event: str, **fields: Any) -> None:
     """Дописывает одно событие в journal.jsonl и сразу сбрасывает его на диск.
 
     Строка должна пережить аварийное завершение процесса сразу после записи.
     """
     entry = {"ts": datetime.now().isoformat(timespec="seconds"), "source": source, "event": event}
+    fields = scrub(fields)
     with world.JOURNAL_PATH.open("a", encoding="utf-8") as stream:
         stream.write(json.dumps({**entry, **fields}, ensure_ascii=False) + "\n")
         stream.flush()
@@ -169,7 +186,7 @@ def _allowlisted[M: Allowlisted](model: type[M], records: Any, source: str) -> l
     skipped = 0
     for record in records if isinstance(records, list) else []:
         try:
-            items.append(model.model_validate(record))
+            items.append(model.model_validate(scrub(record)))
         except ValidationError:
             skipped += 1
     if skipped:
@@ -178,7 +195,7 @@ def _allowlisted[M: Allowlisted](model: type[M], records: Any, source: str) -> l
 
 
 def load_config() -> Config:
-    return Config.model_validate(world.load_config())
+    return Config.model_validate(scrub(world.load_config()))
 
 
 def load_venues() -> list[Venue]:
@@ -227,8 +244,11 @@ def address_allowed(address: str, config: Config) -> bool:
     return bool(match) and match.group(1).lower() in allowed
 
 
-# Ссылка по регламенту (http://, https://, www.) и её запись без схемы: домен с путём после косой черты.
-LINK = re.compile(r"https?://|www\.|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+/\S", re.IGNORECASE)
+# Ссылка по регламенту: http://, https://, www. Проверяется во всём письме и в сверке обвязки.
+LINK = re.compile(r"https?://|www\.", re.IGNORECASE)
+# Запись ссылки без схемы (домен с путём). Проверяется только в том, что написала модель:
+# в названиях залов из каталога встречаются похожие сочетания вроде «2.1/3».
+BARE_LINK = re.compile(r"\b[a-z0-9-]+(?:\.[a-z0-9-]+)+/\S", re.IGNORECASE)
 _CLOCK = re.compile(r"\b\d{1,2}:\d{2}\b")
 _SLOT = re.compile(r"(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})")
 
@@ -411,8 +431,11 @@ def book_venue(venue_id: VenueId) -> dict[str, Any]:
     def refuse(status: str, error: str, **data: Any) -> dict[str, Any]:
         return _reply("book_venue", status, error, log, venue_id=venue_id, **data)
 
+    # Ключ строится из сути операции и от модели не зависит: после падения процесса новая
+    # сессия модели придёт с тем же ключом. У записи без ключа он выводится из её площадки.
+    key = f"booking:{venue_id}"
     bookings = load_bookings()
-    existing = next((b for b in bookings if b.venue_id == venue_id), None)
+    existing = next((b for b in bookings if (b.idempotency_key or f"booking:{b.venue_id}") == key), None)
     if existing:
         return _reply(
             "book_venue",
@@ -451,7 +474,7 @@ def book_venue(venue_id: VenueId) -> dict[str, Any]:
         )
 
     try:
-        record = world.record_booking(venue.id, venue.cost_kzt, idempotency_key=f"booking:{venue.id}")
+        record = world.record_booking(venue.id, venue.cost_kzt, idempotency_key=key)
     except world.NoCapacityError:
         # Текст исключения приходит из сырого мира, дальше идёт только собственный код причины.
         return refuse("venue_refused", "Площадка отказала в брони: залы заняты или закрыты.")
@@ -494,6 +517,8 @@ def slot_refusal(
         return "unknown_mentor", "Такого ментора нет в ростере."
     if mentor.track != team.track:
         return "mentor_track_mismatch", f"Ментор ведёт другой трек, команде нужен {team.track}."
+    if rules.require_venue_capacity_fit and hall.capacity is not None and team.size > hall.capacity:
+        return "hall_too_small", f"Зал вмещает {hall.capacity}, в команде {team.size}."
     if item.mentor_slot not in mentor.available_slots:
         return "mentor_unavailable", "Ментор в этот слот недоступен."
     if item.mentor_slot not in hall.available_slots or item.pitch_slot not in hall.available_slots:
@@ -512,13 +537,14 @@ def slot_refusal(
     return None
 
 
-def _batch_reply(tool: str, results: list[dict[str, Any]], log_key: str, **data: Any) -> dict[str, Any]:
+def _batch_reply(
+    tool: str, results: list[dict[str, Any]], log_rows: list[dict[str, Any]], **data: Any
+) -> dict[str, Any]:
     """Ответ инструмента со списком: общий статус по числу отказов и результат каждого элемента."""
     refused = sum(1 for result in results if result["error"])
     status = "ok" if not refused else "refused" if refused == len(results) else "partial"
     error = f"Отклонено элементов: {refused} из {len(results)}. Причины в results." if refused else None
-    log = {"results": [{log_key: r[log_key], "status": r["status"]} for r in results]}
-    return _reply(tool, status, error, log, results=results, **data)
+    return _reply(tool, status, error, {"results": log_rows}, results=results, **data)
 
 
 @mcp.tool()
@@ -530,8 +556,9 @@ def assign_slots(
     Работает только после брони и только на забронированной площадке. Зал и ментор должны
     совпадать с треком команды, слоты должны быть свободны у ментора и в зале. Две команды
     не могут занимать один зал или одного ментора в одно время. Каждое назначение проверяется
-    отдельно, отказ одного не отменяет остальные. Слот команды, которой уже ушло письмо,
-    изменить нельзя.
+    отдельно, отказ одного не отменяет остальные. Слот нельзя изменить, если письмо со слотами
+    уже ушло капитану команды или ментору, которого касается изменение. Поменять местами две
+    назначенные команды одним вызовом нельзя: каждое назначение сверяется с текущей сеткой.
     """
     bookings = load_bookings()
     config = load_config()
@@ -543,9 +570,17 @@ def assign_slots(
     mentors = {mentor.id: mentor for mentor in load_mentors()}
     schedule = {entry.team_id: entry for entry in load_schedule()}
     notified = {message.recipient.lower() for message in load_outbox()}
+
+    def letter_sent(team: Team, current: SlotEntry | None, item: SlotAssignment) -> bool:
+        """Ушло ли письмо со слотами капитану или ментору, чьё расписание меняет назначение."""
+        mentor_ids = {item.mentor_id} | ({current.mentor_id} if current else set())
+        addresses = [team.captain_email] + [mentors[m].email for m in mentor_ids if m in mentors]
+        return any(address.lower() in notified for address in addresses)
+
     results = []
     for item in assignments:
         team = teams.get(item.team_id)
+        # Назначение команды в schedule.json одно, запись хранится под её идентификатором.
         current = schedule.get(item.team_id)
         wanted = (venue.id, item.hall_id, item.mentor_id, item.mentor_slot, item.pitch_slot)
         if team is None:
@@ -555,8 +590,8 @@ def assign_slots(
         ):
             results.append({"team_id": item.team_id, "status": "unchanged", "error": None})
             continue
-        elif team.captain_email.lower() in notified:
-            refusal = ("already_notified", "Команде уже ушло письмо со слотами, менять их нельзя.")
+        elif letter_sent(team, current, item):
+            refusal = ("already_notified", "Капитану или ментору уже ушло письмо со слотами, менять их нельзя.")
         else:
             others = [entry for entry in schedule.values() if entry.team_id != team.id]
             refusal = slot_refusal(item, team, venue, mentors, others, config.slot_conflict_rules)
@@ -576,10 +611,14 @@ def assign_slots(
         schedule[team.id] = SlotEntry.model_validate(record)
         results.append({"team_id": team.id, "status": "assigned", "error": None})
 
+    log_rows = [
+        {**item.model_dump(), "status": result["status"]}
+        for item, result in zip(assignments, results, strict=True)
+    ]
     return _batch_reply(
         "assign_slots",
         results,
-        "team_id",
+        log_rows,
         teams_without_slots=[team_id for team_id in teams if team_id not in schedule],
     )
 
@@ -587,8 +626,11 @@ def assign_slots(
 class OutgoingMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    recipient: Annotated[str, Field(min_length=3, max_length=254, description="Один адрес получателя")]
-    subject: Annotated[str, Field(min_length=1, max_length=200)]
+    # Перевод строки в адресе или теме позволил бы дописать в письмо свои заголовки.
+    recipient: Annotated[
+        str, Field(min_length=3, max_length=254, pattern=r"^[^\r\n]+$", description="Один адрес получателя")
+    ]
+    subject: Annotated[str, Field(min_length=1, max_length=200, pattern=r"^[^\r\n]+$")]
     text: Annotated[str, Field(min_length=1, max_length=2000)]
 
 
@@ -651,16 +693,19 @@ def send_notifications(
     schedule = {entry.team_id: entry for entry in load_schedule()}
     roster = {team.captain_email.lower(): team.captain_email for team in teams}
     roster |= {mentor.email.lower(): mentor.email for mentor in mentors}
-    sent = {message.recipient.lower() for message in load_outbox()}
+    # Ключи уже отправленных писем. У записи без ключа он выводится из адреса.
+    sent = {m.idempotency_key or f"notify:{m.recipient.lower()}" for m in load_outbox()}
+    forbid_links = config.forbid_external_links_in_notifications
 
     def check(message: OutgoingMessage) -> tuple[str, str | None, str, str, str]:
         """Статус, текст отказа, адрес, идентификатор адресата и итоговый текст письма."""
         address = message.recipient.strip().lower()
         recipient = roster.get(address, message.recipient.strip())
         text = message.text.strip()
+        written = f"{message.subject} {text}"
         if not address_allowed(address, config):
             return "external_recipient", "Адрес вне разрешённых доменов или адресов несколько.", recipient, "", text
-        if address in sent:
+        if f"notify:{address}" in sent:
             return "already_sent", None, recipient, "", text
         owner = recipient
         if address in roster:
@@ -668,7 +713,7 @@ def send_notifications(
             if facts is None:
                 return "schedule_incomplete", "Слоты этого адресата ещё не назначены.", recipient, "", text
             owner, block, clocks = facts
-            foreign = sorted(set(_CLOCK.findall(f"{message.subject} {text}")) - clocks)
+            foreign = sorted(set(_CLOCK.findall(written)) - clocks)
             if foreign:
                 return (
                     "wrong_slot_time",
@@ -676,7 +721,7 @@ def send_notifications(
                     recipient, "", text,
                 )
             text = f"{text}\n\n{block}"
-        if config.forbid_external_links_in_notifications and LINK.search(f"{message.subject} {text}"):
+        if forbid_links and (LINK.search(f"{message.subject} {text}") or BARE_LINK.search(written)):
             return "link_forbidden", "Ссылки в письмах запрещены регламентом.", recipient, "", text
         return "sent", None, recipient, owner, text
 
@@ -691,14 +736,20 @@ def send_notifications(
                 target_id=owner,
                 idempotency_key=f"notify:{recipient.lower()}",
             )
-            sent.add(recipient.lower())
+            sent.add(f"notify:{recipient.lower()}")
         results.append({"recipient": recipient, "status": status, "error": error})
 
+    log_rows = [
+        {"recipient": result["recipient"], "status": result["status"], "subject": message.subject}
+        for message, result in zip(messages, results, strict=True)
+    ]
     return _batch_reply(
         "send_notifications",
         results,
-        "recipient",
-        recipients_without_notification=[address for key, address in roster.items() if key not in sent],
+        log_rows,
+        recipients_without_notification=[
+            address for key, address in roster.items() if f"notify:{key}" not in sent
+        ],
     )
 
 
