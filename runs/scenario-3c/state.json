@@ -1,0 +1,20 @@
+{
+  "status": "new",
+  "attempts": 0,
+  "decision": null,
+  "selected_venue": null,
+  "skill_activated": false,
+  "bulletin": null,
+  "checkpoint": null,
+  "token_usage": {
+    "model": "openai:gpt-5.6-luna",
+    "requests": 2,
+    "input_tokens": 912,
+    "output_tokens": 165,
+    "cost_usd": 0.00038
+  },
+  "reason": null,
+  "rejected_venues": [],
+  "refused_venues": [],
+  "history": []
+}

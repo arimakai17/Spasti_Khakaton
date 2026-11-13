@@ -1,0 +1,16 @@
+$ agent.py --no-skill  (CRASH_AT=-)
+код возврата: 0
+--- stdout ---
+Статус: waiting_approval. Нужна бронь площадки V-HUB «Образовательный центр QazTech Hub» за 350000 KZT. Решение оператора: agent.py --approve или agent.py --reject.
+
+--- stderr ---
+
+
+$ agent.py --approve --no-skill  (CRASH_AT=-)
+код возврата: 0
+--- stdout ---
+Статус: done.
+
+--- stderr ---
+
+

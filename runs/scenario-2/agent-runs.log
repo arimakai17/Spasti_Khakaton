@@ -1,0 +1,26 @@
+$ agent.py   (CRASH_AT=-)
+код возврата: 0
+--- stdout ---
+Статус: waiting_approval. Нужна бронь площадки V-HUB «Образовательный центр QazTech Hub» за 350000 KZT. Решение оператора: agent.py --approve или agent.py --reject.
+
+--- stderr ---
+
+
+$ agent.py --approve  (CRASH_AT=after_booking:V-HUB)
+код возврата: 1
+--- stdout ---
+
+--- stderr ---
+[сбой] процесс прерван в точке after_booking:V-HUB
+MCP tool returned an error.
+Запуск прерван: UserError: Error running tool book_venue: Connection closed
+
+
+$ agent.py   (CRASH_AT=-)
+код возврата: 0
+--- stdout ---
+Статус: done.
+
+--- stderr ---
+
+

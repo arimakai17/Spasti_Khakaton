@@ -1,0 +1,5 @@
+{"ts": "2026-11-14T00:58:58", "source": "agent", "event": "launch", "args": ["--query", "Какой текущий статус и слот у одной команды T-01?"], "status": "new"}
+{"ts": "2026-11-14T00:59:00", "source": "agent", "event": "llm_call", "input_tokens": 300, "output_tokens": 37, "cost_usd_total": 0.000104}
+{"ts": "2026-11-14T00:59:00", "source": "agent", "event": "tool_start", "tool": "get_status"}
+{"ts": "2026-11-14T00:59:00", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
+{"ts": "2026-11-14T00:59:02", "source": "agent", "event": "llm_call", "input_tokens": 612, "output_tokens": 128, "cost_usd_total": 0.00038}
