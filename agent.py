@@ -168,6 +168,7 @@ PROVIDERS: dict[str, tuple[str | None, str | None, str, str]] = {
 }
 
 # USD за 1 млн входных и выходных токенов. Имя модели сравнивается без префикса провайдера.
+# gpt-5.6-luna: стандартный тариф со страницы цен OpenAI, сверено 14.11.2026.
 PRICES_USD_PER_1M: dict[str, tuple[float, float]] = {
     "gpt-5.6-luna": (0.20, 1.20),
 }
@@ -554,7 +555,9 @@ async def work(
     hooks = Accounting(state, setup, config.max_cost_usd)
     session = SQLiteSession(f"attempt-{state.attempts}", "sessions.db")
     message = brief(state)
-    nudges = 0
+    # Доводки по миру и по форме отчёта считаются отдельно: исправление сетки
+    # не должно отнимать у модели попытки переписать бюллетень.
+    world_nudges = report_nudges = 0
     try:
         async with ops_server() as server:
             agent = Agent(
@@ -596,21 +599,23 @@ async def work(
                 out_of_turns = hooks.calls >= max_turns
                 if problems and out_of_turns:
                     return finish(state, "failed", f"Лимит шагов ({max_turns}) исчерпан: {'; '.join(problems)}.")
-                if problems and nudges == MAX_NUDGES:
+                if problems and world_nudges == MAX_NUDGES:
                     return finish(state, "failed", f"Модель не довела перенос: {'; '.join(problems)}.")
-                if out_of_turns or nudges == MAX_NUDGES:
+                if not problems and (out_of_turns or report_nudges == MAX_NUDGES):
                     # Мир перенесён, не хватает только формы отчёта. Перенос от этого не отменяется.
                     journal("agent", "bulletin_incomplete", missing=gaps)
                     state.bulletin = report
                     return finish(state, "done", "сверка файлов мира прошла, бюллетень не по шаблону")
-                nudges += 1
-                journal("agent", "nudge", number=nudges)
                 if problems:
+                    world_nudges += 1
+                    journal("agent", "nudge", about="world", number=world_nudges)
                     message = "Перенос не завершён. Сверка файлов мира показала:\n" + "\n".join(
                         f"- {problem}" for problem in problems
                     )
                     message += "\nПродолжи работу инструментами."
                 else:
+                    report_nudges += 1
+                    journal("agent", "nudge", about="bulletin", number=report_nudges)
                     message = (
                         "Перенос выполнен, но отчёт не соответствует шаблону бюллетеня из навыка. "
                         f"Не хватает: {'; '.join(gaps)}. Напиши бюллетень заново целиком по шаблону."
@@ -692,6 +697,8 @@ def main() -> None:
     if args.query is not None:
         setup = build_model()
         state.token_usage.model = setup.name
+        # Флаг описывает текущий запуск, а в справочном режиме навыки закрыты.
+        state.skill_activated = False
         save_state(state)
         print(run_or_exit(answer_query(state, config, setup, args.query, max_turns)))
         return

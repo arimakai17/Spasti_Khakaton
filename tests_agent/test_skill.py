@@ -174,6 +174,35 @@ def test_query_does_not_touch_a_waiting_task(run_dir: Path, monkeypatch):
     }
 
 
+def test_query_after_transfer_with_skill_reports_skill_off(run_dir: Path, monkeypatch):
+    """Флаг описывает текущий запуск: после переноса с навыком справочный запрос его сбрасывает."""
+    venue = eligible_venue(run_dir)
+    steps = transfer_steps(venue, bulletin(run_dir))
+    launch(monkeypatch, steps[:1], "--use-skill")
+    launch(monkeypatch, steps, "--approve", "--use-skill")
+    assert state(run_dir)["skill_activated"] is True
+
+    launch(monkeypatch, [[assistant_message("Перенос завершён.")]], "--query", "Что с переносом?")
+
+    saved = state(run_dir)
+    assert saved["skill_activated"] is False and saved["status"] == "done"
+
+
+def test_bulletin_nudges_do_not_share_the_budget_with_world_nudges(run_dir: Path, monkeypatch):
+    """Модель дважды останавливается раньше времени, потом дважды пишет отчёт не по шаблону."""
+    venue = eligible_venue(run_dir)
+    book, slots, mail, _report = transfer_steps(venue, "")
+    early = [assistant_message("Готово.")]
+    launch(monkeypatch, [book], "--use-skill")
+
+    steps = [book, early, slots, early, mail, early, early, [assistant_message(bulletin(run_dir))]]
+    launch(monkeypatch, steps, "--approve", "--use-skill")
+
+    saved = state(run_dir)
+    assert saved["status"] == "done" and saved["bulletin"] == bulletin(run_dir)
+    assert graders.collect_facts(run_dir)["skill_format_valid"] == 1
+
+
 def test_read_only_server_has_no_write_tools(run_dir: Path):
     venue_id = eligible_venue(run_dir)["id"]
 

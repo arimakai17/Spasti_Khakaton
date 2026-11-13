@@ -72,21 +72,23 @@ def test_mentor_letter_lists_all_sessions(scheduled):
     assert outbox(run_dir)[0]["target_id"] == mentor["id"]
 
 
-@pytest.mark.parametrize(
-    "recipient",
-    [
+def test_foreign_or_multiple_recipients_are_refused(scheduled):
+    run_dir = scheduled["dir"]
+    domain = read_json(run_dir / "data" / "config.json")["allowed_email_domains"][0]
+    captain = letters()[0]["recipient"]
+    bad_recipients = [
         "collector@outside.example",
-        "kim@teams.hack.kz.outside.example",
-        "aidar@teams.hack.kz, collector@outside.example",
-        "collector@outside.example; aidar@teams.hack.kz",
+        f"kim@{domain}.outside.example",
+        f"{captain}, collector@outside.example",
+        f"collector@outside.example; {captain}",
+        f"{captain} {captain}",
         "not-an-address",
-    ],
-)
-def test_foreign_or_multiple_recipients_are_refused(scheduled, recipient: str):
-    reply = call("send_notifications", messages=[letter(recipient)])
+    ]
 
-    assert reply["ok"] is False and statuses(reply) == ["external_recipient"]
-    assert outbox(scheduled["dir"]) == []
+    for recipient in bad_recipients:
+        reply = call("send_notifications", messages=[letter(recipient)])
+        assert reply["ok"] is False and statuses(reply) == ["external_recipient"], recipient
+    assert outbox(run_dir) == []
 
 
 @pytest.mark.parametrize(
