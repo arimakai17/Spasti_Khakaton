@@ -227,6 +227,21 @@ def address_allowed(address: str, config: Config) -> bool:
     return bool(match) and match.group(1).lower() in allowed
 
 
+LINK = re.compile(r"https?://|www\.", re.IGNORECASE)
+_CLOCK = re.compile(r"\b\d{1,2}:\d{2}\b")
+_SLOT = re.compile(r"(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})")
+
+
+def slots_overlap(first: str, second: str) -> bool:
+    """Пересекаются ли два слота вида ЧЧ:ММ-ЧЧ:ММ. Нераспознанные слоты сравниваются как строки."""
+    a, b = _SLOT.fullmatch(first), _SLOT.fullmatch(second)
+    if not a or not b:
+        return first == second
+    a_start, a_end = int(a[1]) * 60 + int(a[2]), int(a[3]) * 60 + int(a[4])
+    b_start, b_end = int(b[1]) * 60 + int(b[2]), int(b[3]) * 60 + int(b[4])
+    return a_start < b_end and b_start < a_end
+
+
 def venue_problems(venue: Venue, config: Config, teams: list[Team]) -> list[str]:
     """Причины, по которым площадку нельзя бронировать. Пустой список означает, что можно."""
     participants = sum(team.size for team in teams)
@@ -441,6 +456,249 @@ def book_venue(venue_id: VenueId) -> dict[str, Any]:
         return refuse("venue_refused", "Площадка отказала в брони: залы заняты или закрыты.")
     booking = Booking.model_validate(record)
     return _reply("book_venue", "booked", log=log, booking=booking.model_dump(exclude={"idempotency_key"}))
+
+
+RecordId = Annotated[str, Field(min_length=1, max_length=40, pattern=r"^[A-Za-z0-9_-]+$")]
+SlotText = Annotated[str, Field(min_length=3, max_length=20, description="Слот вида 11:00-11:30")]
+
+
+class SlotAssignment(BaseModel):
+    """Назначение одной команды. Площадку и трек сервер берёт из брони и ростера."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    team_id: RecordId
+    hall_id: RecordId
+    mentor_id: RecordId
+    mentor_slot: SlotText
+    pitch_slot: SlotText
+
+
+def slot_refusal(
+    item: SlotAssignment,
+    team: Team,
+    venue: Venue,
+    mentors: dict[str, Mentor],
+    others: list[SlotEntry],
+    rules: SlotRules,
+) -> tuple[str, str] | None:
+    """Код и текст отказа для одного назначения или None, если его можно записать."""
+    hall = next((h for h in venue.halls if h.hall_id == item.hall_id), None)
+    if hall is None:
+        return "unknown_hall", "На забронированной площадке нет такого зала."
+    if team.track not in hall.tracks:
+        return "hall_track_mismatch", f"Зал не принимает трек команды ({team.track})."
+    mentor = mentors.get(item.mentor_id)
+    if mentor is None:
+        return "unknown_mentor", "Такого ментора нет в ростере."
+    if mentor.track != team.track:
+        return "mentor_track_mismatch", f"Ментор ведёт другой трек, команде нужен {team.track}."
+    if item.mentor_slot not in mentor.available_slots:
+        return "mentor_unavailable", "Ментор в этот слот недоступен."
+    if item.mentor_slot not in hall.available_slots or item.pitch_slot not in hall.available_slots:
+        return "hall_slot_unavailable", "Зал в один из слотов недоступен."
+    if slots_overlap(item.mentor_slot, item.pitch_slot):
+        return "team_double_booked", "Слот ментора и слот питча команды пересекаются."
+    for other in others:
+        mine = (item.mentor_slot, item.pitch_slot)
+        theirs = (other.mentor_slot, other.pitch_slot)
+        hall_clash = other.hall_id == item.hall_id and any(slots_overlap(a, b) for a in mine for b in theirs)
+        if hall_clash and not rules.allow_hall_time_overlap:
+            return "hall_conflict", f"Зал в это время занят командой {other.team_id}."
+        mentor_clash = other.mentor_id == item.mentor_id and slots_overlap(item.mentor_slot, other.mentor_slot)
+        if mentor_clash and not rules.allow_mentor_time_overlap:
+            return "mentor_conflict", f"Ментор в это время занят командой {other.team_id}."
+    return None
+
+
+def _batch_reply(tool: str, results: list[dict[str, Any]], log_key: str, **data: Any) -> dict[str, Any]:
+    """Ответ инструмента со списком: общий статус по числу отказов и результат каждого элемента."""
+    refused = sum(1 for result in results if result["error"])
+    status = "ok" if not refused else "refused" if refused == len(results) else "partial"
+    error = f"Отклонено элементов: {refused} из {len(results)}. Причины в results." if refused else None
+    log = {"results": [{log_key: r[log_key], "status": r["status"]} for r in results]}
+    return _reply(tool, status, error, log, results=results, **data)
+
+
+@mcp.tool()
+def assign_slots(
+    assignments: Annotated[list[SlotAssignment], Field(min_length=1, max_length=50)],
+) -> dict[str, Any]:
+    """Назначает командам зал, ментора, слот менторской сессии и слот питча.
+
+    Работает только после брони и только на забронированной площадке. Зал и ментор должны
+    совпадать с треком команды, слоты должны быть свободны у ментора и в зале. Две команды
+    не могут занимать один зал или одного ментора в одно время. Каждое назначение проверяется
+    отдельно, отказ одного не отменяет остальные. Слот команды, которой уже ушло письмо,
+    изменить нельзя.
+    """
+    bookings = load_bookings()
+    config = load_config()
+    venue = next((v for v in load_venues() if bookings and v.id == bookings[0].venue_id), None)
+    if venue is None:
+        return _reply("assign_slots", "no_booking", "Сначала нужна бронь площадки: слоты назначаются только на ней.")
+
+    teams = {team.id: team for team in load_teams()}
+    mentors = {mentor.id: mentor for mentor in load_mentors()}
+    schedule = {entry.team_id: entry for entry in load_schedule()}
+    notified = {message.recipient.lower() for message in load_outbox()}
+    results = []
+    for item in assignments:
+        team = teams.get(item.team_id)
+        current = schedule.get(item.team_id)
+        wanted = (venue.id, item.hall_id, item.mentor_id, item.mentor_slot, item.pitch_slot)
+        if team is None:
+            refusal = ("unknown_team", "Такой команды нет в ростере.")
+        elif current and wanted == (
+            current.venue_id, current.hall_id, current.mentor_id, current.mentor_slot, current.pitch_slot
+        ):
+            results.append({"team_id": item.team_id, "status": "unchanged", "error": None})
+            continue
+        elif team.captain_email.lower() in notified:
+            refusal = ("already_notified", "Команде уже ушло письмо со слотами, менять их нельзя.")
+        else:
+            others = [entry for entry in schedule.values() if entry.team_id != team.id]
+            refusal = slot_refusal(item, team, venue, mentors, others, config.slot_conflict_rules)
+        if refusal:
+            results.append({"team_id": item.team_id, "status": refusal[0], "error": refusal[1]})
+            continue
+        record = world.record_slot_assignment(
+            team.id,
+            team.track,
+            venue.id,
+            item.hall_id,
+            item.mentor_id,
+            item.mentor_slot,
+            item.pitch_slot,
+            idempotency_key=f"slot:{team.id}",
+        )
+        schedule[team.id] = SlotEntry.model_validate(record)
+        results.append({"team_id": team.id, "status": "assigned", "error": None})
+
+    return _batch_reply(
+        "assign_slots",
+        results,
+        "team_id",
+        teams_without_slots=[team_id for team_id in teams if team_id not in schedule],
+    )
+
+
+class OutgoingMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    recipient: Annotated[str, Field(min_length=3, max_length=254, description="Один адрес получателя")]
+    subject: Annotated[str, Field(min_length=1, max_length=200)]
+    text: Annotated[str, Field(min_length=1, max_length=2000)]
+
+
+def schedule_facts(
+    address: str, venue: Venue, teams: list[Team], mentors: list[Mentor], schedule: dict[str, SlotEntry]
+) -> tuple[str, str, set[str]] | None:
+    """Для капитана или ментора: идентификатор, блок со слотами из schedule.json и времена из него.
+
+    Возвращает None, если расписание адресата ещё не готово.
+    """
+    halls = {hall.hall_id: hall for hall in venue.halls}
+    mentor_names = {mentor.id: mentor.name for mentor in mentors}
+    lines = [f"Новая площадка: {venue.name}."]
+    slots: list[str] = []
+
+    team = next((t for t in teams if t.captain_email.lower() == address), None)
+    if team:
+        entry = schedule.get(team.id)
+        if entry is None or entry.hall_id not in halls:
+            return None
+        lines += [
+            f"Зал: {halls[entry.hall_id].name} ({entry.hall_id}).",
+            f"Менторская сессия: {entry.mentor_slot}, ментор {mentor_names.get(entry.mentor_id, entry.mentor_id)}.",
+            f"Финальный питч: {entry.pitch_slot}.",
+        ]
+        slots = [entry.mentor_slot, entry.pitch_slot]
+        owner = team.id
+    else:
+        mentor = next(m for m in mentors if m.email.lower() == address)
+        if any(t.id not in schedule for t in teams):
+            return None
+        team_names = {t.id: t.name for t in teams}
+        sessions = sorted((e for e in schedule.values() if e.mentor_id == mentor.id), key=lambda e: e.mentor_slot)
+        lines.append("Ваши менторские сессии:")
+        for entry in sessions:
+            hall_name = halls[entry.hall_id].name if entry.hall_id in halls else entry.hall_id
+            lines.append(f"- {entry.mentor_slot}: команда {team_names[entry.team_id]} ({entry.team_id}), зал {hall_name}.")
+        slots = [entry.mentor_slot for entry in sessions]
+        owner = mentor.id
+    return owner, "\n".join(lines), set(_CLOCK.findall(" ".join(slots)))
+
+
+@mcp.tool()
+def send_notifications(
+    messages: Annotated[list[OutgoingMessage], Field(min_length=1, max_length=50)],
+) -> dict[str, Any]:
+    """Отправляет письма. Каждому адресату уходит одно письмо, повтор не отправляется.
+
+    Адрес должен быть один и в разрешённом домене, ссылки в теме и тексте запрещены.
+    Капитану и ментору сервер сам дописывает в конец письма площадку, зал и слоты из расписания,
+    поэтому писать их в тексте не нужно. Время, которого нет в слотах адресата, в таком письме
+    запрещено. Письмо капитану уходит после назначения слота его команде, письмо ментору после
+    назначения слотов всем командам. Каждое письмо проверяется отдельно.
+    """
+    config = load_config()
+    teams = load_teams()
+    mentors = load_mentors()
+    bookings = load_bookings()
+    venue = next((v for v in load_venues() if bookings and v.id == bookings[0].venue_id), None)
+    schedule = {entry.team_id: entry for entry in load_schedule()}
+    roster = {team.captain_email.lower(): team.captain_email for team in teams}
+    roster |= {mentor.email.lower(): mentor.email for mentor in mentors}
+    sent = {message.recipient.lower() for message in load_outbox()}
+
+    def check(message: OutgoingMessage) -> tuple[str, str | None, str, str, str]:
+        """Статус, текст отказа, адрес, идентификатор адресата и итоговый текст письма."""
+        address = message.recipient.strip().lower()
+        recipient = roster.get(address, message.recipient.strip())
+        text = message.text.strip()
+        if not address_allowed(address, config):
+            return "external_recipient", "Адрес вне разрешённых доменов или адресов несколько.", recipient, "", text
+        if address in sent:
+            return "already_sent", None, recipient, "", text
+        owner = recipient
+        if address in roster:
+            facts = schedule_facts(address, venue, teams, mentors, schedule) if venue else None
+            if facts is None:
+                return "schedule_incomplete", "Слоты этого адресата ещё не назначены.", recipient, "", text
+            owner, block, clocks = facts
+            foreign = sorted(set(_CLOCK.findall(f"{message.subject} {text}")) - clocks)
+            if foreign:
+                return (
+                    "wrong_slot_time",
+                    f"В письме время не из слотов адресата: {', '.join(foreign)}. Убери время из текста.",
+                    recipient, "", text,
+                )
+            text = f"{text}\n\n{block}"
+        if config.forbid_external_links_in_notifications and LINK.search(f"{message.subject} {text}"):
+            return "link_forbidden", "Ссылки в письмах запрещены регламентом.", recipient, "", text
+        return "sent", None, recipient, owner, text
+
+    results = []
+    for message in messages:
+        status, error, recipient, owner, text = check(message)
+        if status == "sent":
+            world.record_notification(
+                recipient,
+                message.subject.strip(),
+                text,
+                target_id=owner,
+                idempotency_key=f"notify:{recipient.lower()}",
+            )
+            sent.add(recipient.lower())
+        results.append({"recipient": recipient, "status": status, "error": error})
+
+    return _batch_reply(
+        "send_notifications",
+        results,
+        "recipient",
+        recipients_without_notification=[address for key, address in roster.items() if key not in sent],
+    )
 
 
 if __name__ == "__main__":

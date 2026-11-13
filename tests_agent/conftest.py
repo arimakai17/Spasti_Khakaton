@@ -53,3 +53,47 @@ def approve_in_state(run_dir: Path, venue: dict, **fields) -> None:
         "requested_at": "2026-01-01T00:00:00",
     }
     write_state(run_dir, status="running", decision="approve", checkpoint=checkpoint, **fields)
+
+
+def book_approved(run_dir: Path) -> dict:
+    """Бронирует подходящую площадку с решением оператора в state.json."""
+    venue = eligible_venue(run_dir)
+    approve_in_state(run_dir, venue)
+    assert call("book_venue", venue_id=venue["id"])["status"] == "booked"
+    return venue
+
+
+def slot_plan(venue: dict) -> list[dict]:
+    """Корректная сетка, собранная из данных мира: зал и ментор трека, слоты по порядку."""
+    roster = call("get_roster")
+    plan = []
+    for mentor in roster["mentors"]:
+        hall = next(h for h in venue["halls"] if mentor["track"] in h["tracks"])
+        mentor_slots = [s for s in mentor["available_slots"] if s in hall["available_slots"]]
+        pitch_slots = [s for s in hall["available_slots"] if s not in mentor["available_slots"]]
+        teams = [t for t in roster["teams"] if t["track"] == mentor["track"]]
+        for team, mentor_slot, pitch_slot in zip(teams, mentor_slots, pitch_slots, strict=False):
+            plan.append(
+                {
+                    "team_id": team["id"],
+                    "hall_id": hall["hall_id"],
+                    "mentor_id": mentor["id"],
+                    "mentor_slot": mentor_slot,
+                    "pitch_slot": pitch_slot,
+                }
+            )
+    return plan
+
+
+def letters() -> list[dict]:
+    """По одному письму каждому капитану и ментору, без времени в тексте."""
+    roster = call("get_roster")
+    addresses = [t["captain_email"] for t in roster["teams"]] + [m["email"] for m in roster["mentors"]]
+    return [
+        {"recipient": address, "subject": "Перенос хакатона", "text": "Здравствуйте! Хакатон переезжает."}
+        for address in addresses
+    ]
+
+
+def statuses(reply: dict) -> list[str]:
+    return [result["status"] for result in reply["results"]]
