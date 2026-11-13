@@ -12,33 +12,10 @@ import mcp_server
 from mcp_server import Config, Hall, Team, Venue, venue_problems
 
 from .conftest import call, read_json, write_json
+from .modified_world import SECRET, SERVICE_KEY, plant_service_fields
 
 ROOT = Path(__file__).resolve().parent.parent
 READ_TOOLS = ("list_venues", "read_inbox", "get_roster", "get_status")
-SECRET = "canary-"
-SERVICE_KEY = "zz_service_"
-
-
-def plant_service_fields(data_dir: Path) -> int:
-    """Добавляет служебное поле с секретом в каждый словарь каждого файла data/."""
-    counter = 0
-
-    def plant(node):
-        nonlocal counter
-        if isinstance(node, dict):
-            for value in list(node.values()):
-                plant(value)
-            counter += 1
-            node[f"{SERVICE_KEY}{counter}"] = f"{SECRET}planted-{counter:04d}"
-        elif isinstance(node, list):
-            for item in node:
-                plant(item)
-
-    for path in sorted(data_dir.glob("*.json")):
-        payload = read_json(path)
-        plant(payload)
-        write_json(path, payload)
-    return counter
 
 
 def test_read_tools_drop_service_fields_at_every_level(run_dir: Path):

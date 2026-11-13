@@ -10,7 +10,7 @@
   uv run python agent.py --reject
   uv run python agent.py --use-skill
   uv run python agent.py --no-skill
-  uv run python agent.py --query "Какой текущий статус и слот у одной команды T-01?"
+  uv run python agent.py --query "Какой текущий статус переноса?"
 
 Папка прогона и папка кода различаются: evals/graders.py --run-all запускает этот файл
 по полному пути из временной папки. Файлы мира (data/, state.json, bookings.json и другие)

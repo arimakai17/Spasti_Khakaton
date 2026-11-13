@@ -227,7 +227,8 @@ def address_allowed(address: str, config: Config) -> bool:
     return bool(match) and match.group(1).lower() in allowed
 
 
-LINK = re.compile(r"https?://|www\.", re.IGNORECASE)
+# Ссылка по регламенту (http://, https://, www.) и её запись без схемы: домен с путём после косой черты.
+LINK = re.compile(r"https?://|www\.|\b[a-z0-9-]+(?:\.[a-z0-9-]+)+/\S", re.IGNORECASE)
 _CLOCK = re.compile(r"\b\d{1,2}:\d{2}\b")
 _SLOT = re.compile(r"(\d{1,2}):(\d{2})-(\d{1,2}):(\d{2})")
 
