@@ -701,5 +701,11 @@ def send_notifications(
     )
 
 
+WRITE_TOOLS = ("book_venue", "assign_slots", "send_notifications")
+
 if __name__ == "__main__":
+    # Справочный режим: сервер стартует без инструментов записи, вызвать их нельзя.
+    if os.getenv("MCP_READ_ONLY") == "1":
+        for tool_name in WRITE_TOOLS:
+            mcp.remove_tool(tool_name)
     mcp.run()
