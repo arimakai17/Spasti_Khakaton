@@ -42,7 +42,7 @@ from agents.agent import ToolsToFinalOutputResult
 from agents.items import ModelResponse
 from agents.mcp import MCPServerStdio
 from agents.models.interface import Model
-from agents.tool import FunctionToolResult
+from agents.tool import FunctionToolResult, Tool
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from pydantic import BaseModel
@@ -219,13 +219,20 @@ class CostLimitExceeded(Exception):
 
 
 class Accounting(RunHooks):
-    """Считает вызовы модели и токены. Обрывает прогон, когда стоимость выходит за лимит."""
+    """Считает вызовы модели и токены, отмечает начало вызова инструмента.
+
+    Обрывает прогон, когда стоимость выходит за лимит.
+    """
 
     def __init__(self, state: TaskState, setup: ModelSetup, max_cost_usd: float) -> None:
         self.state = state
         self.prices = setup.prices
         self.max_cost_usd = max_cost_usd
         self.calls = 0
+
+    async def on_tool_start(self, context: RunContextWrapper, agent: Agent, tool: Tool) -> None:
+        # Если сервер упадёт внутри инструмента, его собственной строки в журнале не будет.
+        journal("agent", "tool_start", tool=tool.name)
 
     async def on_llm_end(self, context: RunContextWrapper, agent: Agent, response: ModelResponse) -> None:
         self.calls += 1
