@@ -432,10 +432,11 @@ def book_venue(venue_id: VenueId) -> dict[str, Any]:
         return _reply("book_venue", status, error, log, venue_id=venue_id, **data)
 
     # Ключ строится из сути операции и от модели не зависит: после падения процесса новая
-    # сессия модели придёт с тем же ключом. У записи без ключа он выводится из её площадки.
+    # сессия модели придёт с тем же ключом. Запись считается той же бронью и тогда, когда
+    # ключ в ней другой или его нет, но площадка та же.
     key = f"booking:{venue_id}"
     bookings = load_bookings()
-    existing = next((b for b in bookings if (b.idempotency_key or f"booking:{b.venue_id}") == key), None)
+    existing = next((b for b in bookings if key in (b.idempotency_key, f"booking:{b.venue_id}")), None)
     if existing:
         return _reply(
             "book_venue",
@@ -693,8 +694,9 @@ def send_notifications(
     schedule = {entry.team_id: entry for entry in load_schedule()}
     roster = {team.captain_email.lower(): team.captain_email for team in teams}
     roster |= {mentor.email.lower(): mentor.email for mentor in mentors}
-    # Ключи уже отправленных писем. У записи без ключа он выводится из адреса.
-    sent = {m.idempotency_key or f"notify:{m.recipient.lower()}" for m in load_outbox()}
+    # Ключи уже отправленных писем: сохранённый в записи и выведенный из её адреса.
+    # Второй нужен для записи без ключа или с чужим ключом, сделанной в обход инструмента.
+    sent = {key for m in load_outbox() for key in (m.idempotency_key, f"notify:{m.recipient.lower()}") if key}
     forbid_links = config.forbid_external_links_in_notifications
 
     def check(message: OutgoingMessage) -> tuple[str, str | None, str, str, str]:

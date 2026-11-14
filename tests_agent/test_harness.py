@@ -78,6 +78,26 @@ def test_approve_books_and_done_needs_complete_world(run_dir: Path, monkeypatch)
     assert len(model.calls) == 2 + agent.MAX_NUDGES
 
 
+def test_each_launch_starts_a_new_model_session_from_the_brief(run_dir: Path, monkeypatch):
+    """После паузы и --approve модель получает только сводку, без истории прошлого запуска."""
+    import sqlite3
+
+    venue = eligible_venue(run_dir)
+    reads = [function_call("list_venues", {}, call_id="c-venues")]
+    first = launch(monkeypatch, [reads, book(venue)])
+    claim = [assistant_message("Готово.")]
+
+    second = launch(monkeypatch, [book(venue), claim, claim, claim], "--approve")
+
+    assert len(first.calls[0].input) == 1 and len(second.calls[0].input) == 1
+    assert "Оператор одобрил бронь" in str(second.calls[0].input[0])
+    sessions = sqlite3.connect(run_dir / "sessions.db").execute(
+        "select distinct session_id from agent_messages order by session_id"
+    )
+    assert [row[0] for row in sessions] == ["launch-1", "launch-2"]
+    assert state(run_dir)["attempts"] == 1
+
+
 def test_reject_without_alternative_needs_attention_without_model(run_dir: Path, monkeypatch):
     venue = eligible_venue(run_dir)
     launch(monkeypatch, [book(venue)])

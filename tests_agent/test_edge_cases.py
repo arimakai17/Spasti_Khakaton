@@ -273,14 +273,17 @@ def test_hall_name_that_looks_like_a_path_does_not_block_letters(run_dir: Path):
     assert agent.audit_world() == []
 
 
-def test_records_made_without_the_tool_still_count_as_done(run_dir: Path):
-    """Запись без idempotency_key (сделана в обход инструмента) не приводит к дублю."""
+@pytest.mark.parametrize("foreign_key", [None, "made-by-someone-else"])
+def test_records_made_without_the_tool_still_count_as_done(run_dir: Path, foreign_key):
+    """Запись без ключа или с чужим ключом (сделана в обход инструмента) не приводит к дублю."""
     venue = book_approved(run_dir)
     call("assign_slots", assignments=slot_plan(venue))
     captain = letters()[0]
-    world.record_notification(captain["recipient"], "Раньше", "Письмо без ключа")
+    meta = {"idempotency_key": foreign_key} if foreign_key else {}
+    world.record_notification(captain["recipient"], "Раньше", "Письмо в обход инструмента", **meta)
     bookings = read_json(run_dir / "bookings.json")
-    del bookings[0]["idempotency_key"]
+    bookings[0].pop("idempotency_key")
+    bookings[0].update(meta)
     write_json(run_dir / "bookings.json", bookings)
 
     assert statuses(call("send_notifications", messages=[captain])) == ["already_sent"]

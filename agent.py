@@ -571,7 +571,10 @@ async def work(
     """Один запуск модели с доводками. К выходу из функции статус задачи уже выставлен."""
     launch = Launch(state)
     hooks = Accounting(state, setup, config.max_cost_usd)
-    session = SQLiteSession(f"attempt-{state.attempts}", "sessions.db")
+    # Сессия своя на каждый запуск, включая продолжение после решения оператора: модель
+    # начинает со сводки из state.json и файлов мира, а не с истории прошлого запуска.
+    launch_number = sum(1 for step in state.history if step["to"] == "running")
+    session = SQLiteSession(f"launch-{launch_number}", "sessions.db")
     message = brief(state)
     # Доводки по миру и по форме отчёта считаются отдельно: исправление сетки
     # не должно отнимать у модели попытки переписать бюллетень.
