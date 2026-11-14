@@ -209,8 +209,11 @@ def build_model() -> ModelSetup:
             f"Для MODEL_PROVIDER={provider}{origin} не заданы переменные: {', '.join(missing)}. "
             "Образец настроек лежит в .env.example."
         )
-    # Запас повторов на обрыв сети и ответы 429 и 5xx: упавший запуск тратит попытку задачи.
-    client = AsyncOpenAI(base_url=base_url, api_key=api_key, max_retries=5)
+    # Облачный вызов дольше двух минут считается зависшим. Три повтора по 120 секунд на обрыв
+    # сети и ответы 429 и 5xx укладываются в 600 секунд, которые грейдер даёт на запуск.
+    # Локальной модели время не ограничивается: она может отвечать дольше.
+    limits = {} if provider == "ollama" else {"timeout": 120.0, "max_retries": 3}
+    client = AsyncOpenAI(base_url=base_url, api_key=api_key, **limits)
     model_class = OpenAIResponsesModel if api == "responses" else OpenAIChatCompletionsModel
     return ModelSetup(
         model=model_class(model=model_name, openai_client=client),

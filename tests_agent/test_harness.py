@@ -218,6 +218,13 @@ def test_provider_is_chosen_by_environment(monkeypatch, provider, model_var, key
 
     assert isinstance(setup.model, model_class)
     assert setup.name == f"{provider}:vendor/gpt-5.6-luna"
+    # Облачный запрос ограничен по времени, чтобы повторы уложились в лимит грейдера на запуск.
+    client = setup.model._client
+    if provider == "ollama":
+        assert client.max_retries == 2
+    else:
+        assert client.timeout == 120.0 and client.max_retries == 3
+        assert client.timeout * (client.max_retries + 1) < 600
     assert setup.prices == ((0.0, 0.0) if provider == "ollama" else (0.20, 1.20))
 
 
