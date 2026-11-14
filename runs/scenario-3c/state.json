@@ -9,9 +9,9 @@
   "token_usage": {
     "model": "openai:gpt-5.6-luna",
     "requests": 2,
-    "input_tokens": 912,
-    "output_tokens": 165,
-    "cost_usd": 0.00038
+    "input_tokens": 1626,
+    "output_tokens": 262,
+    "cost_usd": 0.00064
   },
   "reason": null,
   "rejected_venues": [],
