@@ -146,6 +146,7 @@ class TaskView(Allowlisted):
     selected_venue: str | None = None
     checkpoint: Checkpoint | None = None
     rejected_venues: list[str] = []
+    refused_venues: list[str] = []
 
 
 # --- Журнал и чтение мира -----------------------------------------------------------------
@@ -452,20 +453,38 @@ def book_venue(venue_id: VenueId) -> dict[str, Any]:
         )
 
     config = load_config()
-    venue = next((v for v in load_venues() if v.id == venue_id), None)
+    venues = {v.id: v for v in load_venues()}
+    teams = load_teams()
+    venue = venues.get(venue_id)
     if venue is None:
         return refuse("unknown_venue", "Такой площадки нет в каталоге.")
 
     # Порядок проверок закреплён: сначала регламент, потом оператор. Площадка вне регламента
     # получает отказ и не может дойти до запроса подтверждения.
-    problems = venue_problems(venue, config, load_teams())
+    problems = venue_problems(venue, config, teams)
     if problems:
         return refuse("not_eligible", "Площадка не проходит регламент.", problems=problems)
 
     task = load_task()
     if venue.id in task.rejected_venues:
         return refuse("rejected_by_operator", "Оператор отклонил бронь этой площадки.")
-    if venue.cost_kzt > config.hitl_threshold_kzt and not approved_by_operator(venue, task):
+    needs_operator = venue.cost_kzt > config.hitl_threshold_kzt and not approved_by_operator(venue, task)
+    approved = venues.get(task.checkpoint.venue_id) if task.checkpoint else None
+    if (
+        needs_operator
+        and approved is not None
+        and approved.id != venue.id
+        and approved.id not in task.refused_venues
+        and approved_by_operator(approved, task)
+        and not venue_problems(approved, config, teams)
+    ):
+        # Оператор уже одобрил другую площадку, и её по-прежнему можно бронировать.
+        # Новый запрос по этой гонял бы его по кругу.
+        return refuse(
+            "other_venue_approved",
+            f"Оператор одобрил площадку {approved.id}. Бронируй её, запрос по другой площадке не принимается.",
+        )
+    if needs_operator:
         return refuse(
             "approval_required",
             "Бронь дороже порога, нужно решение оператора. Работа остановлена до его ответа.",
@@ -573,10 +592,18 @@ def assign_slots(
     notified = {message.recipient.lower() for message in load_outbox()}
 
     def letter_sent(team: Team, current: SlotEntry | None, item: SlotAssignment) -> bool:
-        """Ушло ли письмо со слотами капитану или ментору, чьё расписание меняет назначение."""
+        """Ушло ли письмо, которое это назначение сделало бы неверным.
+
+        В письме капитану есть зал и оба слота. В письме ментору только его сессии:
+        смена одного слота питча на него не влияет.
+        """
+        if team.captain_email.lower() in notified:
+            return True
+        session = (item.mentor_id, item.hall_id, item.mentor_slot)
+        if current and session == (current.mentor_id, current.hall_id, current.mentor_slot):
+            return False
         mentor_ids = {item.mentor_id} | ({current.mentor_id} if current else set())
-        addresses = [team.captain_email] + [mentors[m].email for m in mentor_ids if m in mentors]
-        return any(address.lower() in notified for address in addresses)
+        return any(mentors[m].email.lower() in notified for m in mentor_ids if m in mentors)
 
     results = []
     for item in assignments:
@@ -624,14 +651,18 @@ def assign_slots(
     )
 
 
+ONE_LINE = r"^[^\x00-\x1f\x7f\x85\u2028\u2029]+$"
+
+
 class OutgoingMessage(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     # Перевод строки в адресе или теме позволил бы дописать в письмо свои заголовки.
+    # Запрещены управляющие символы и разделители строк Юникода.
     recipient: Annotated[
-        str, Field(min_length=3, max_length=254, pattern=r"^[^\r\n]+$", description="Один адрес получателя")
+        str, Field(min_length=3, max_length=254, pattern=ONE_LINE, description="Один адрес получателя")
     ]
-    subject: Annotated[str, Field(min_length=1, max_length=200, pattern=r"^[^\r\n]+$")]
+    subject: Annotated[str, Field(min_length=1, max_length=200, pattern=ONE_LINE)]
     text: Annotated[str, Field(min_length=1, max_length=2000)]
 
 

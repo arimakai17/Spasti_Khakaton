@@ -66,6 +66,22 @@ def test_reject_moves_to_the_alternative_and_asks_the_operator_again(run_dir: Pa
     assert state(run_dir)["attempts"] == 1
 
 
+def test_approved_venue_cannot_be_swapped_for_another_expensive_one(run_dir: Path, monkeypatch):
+    """После одобрения одной площадки модель просит другую дорогую. Оператора по кругу не гоняют."""
+    first = eligible_venue(run_dir)["id"]
+    threshold = read_json(run_dir / "data" / "config.json")["hitl_threshold_kzt"]
+    second = open_second_venue(run_dir, cost_kzt=threshold + 1)
+    launch(monkeypatch, [book(first)])
+
+    launch(monkeypatch, [book(second, "c-second"), book(first), *[[assistant_message("Готово.")]] * 3], "--approve")
+
+    saved = state(run_dir)
+    assert saved["checkpoint"]["venue_id"] == first and saved["status"] != "waiting_approval"
+    assert [b["venue_id"] for b in read_json(run_dir / "bookings.json")] == [first]
+    journal = (run_dir / "journal.jsonl").read_text(encoding="utf-8")
+    assert '"status": "other_venue_approved"' in journal
+
+
 def test_refused_venue_with_alternative_does_not_end_the_task(run_dir: Path, monkeypatch):
     reset.reset_world(scenario=4, workdir=run_dir)
     broken = eligible_venue(run_dir)["id"]
@@ -225,14 +241,17 @@ def scheduled(run_dir: Path) -> dict:
 
 
 def test_slot_is_frozen_after_the_mentor_letter(scheduled):
-    run_dir, item = scheduled["dir"], scheduled["plan"][0]
+    """Письмо ментору содержит его сессии: их менять нельзя. Питча в нём нет, его смена идёт обычной проверкой."""
+    run_dir, item, neighbour = scheduled["dir"], scheduled["plan"][0], scheduled["plan"][1]
     mentor = next(m for m in read_json(run_dir / "data" / "mentors.json") if m["id"] == item["mentor_id"])
     assert statuses(call("send_notifications", messages=[{**letters()[0], "recipient": mentor["email"]}])) == ["sent"]
     before = read_json(run_dir / "schedule.json")
 
-    reply = call("assign_slots", assignments=[{**item, "pitch_slot": scheduled["plan"][1]["pitch_slot"]}])
+    session_change = call("assign_slots", assignments=[{**item, "mentor_slot": neighbour["mentor_slot"]}])
+    pitch_change = call("assign_slots", assignments=[{**item, "pitch_slot": neighbour["pitch_slot"]}])
 
-    assert statuses(reply) == ["already_notified"]
+    assert statuses(session_change) == ["already_notified"]
+    assert statuses(pitch_change) == ["hall_conflict"]
     assert read_json(run_dir / "schedule.json") == before
 
 
@@ -249,10 +268,11 @@ def test_audit_sees_mentor_letter_without_session_times(scheduled):
     assert f"в письме ментору {mentor['id']} нет времени его сессий" in "; ".join(agent.audit_world())
 
 
-def test_subject_with_line_break_is_rejected_by_schema(scheduled):
+@pytest.mark.parametrize("separator", ["\r\n", "\n", "\u2028", "\u2029", "\x85", "\x0b"])
+def test_subject_with_line_break_is_rejected_by_schema(scheduled, separator: str):
     captain = letters()[0]
     with pytest.raises(Exception, match="subject"):
-        call("send_notifications", messages=[{**captain, "subject": "Перенос\r\nBcc: spy@outside.example"}])
+        call("send_notifications", messages=[{**captain, "subject": f"Перенос{separator}Bcc: spy@outside.example"}])
     assert not (scheduled["dir"] / "outbox.json").exists()
 
 
