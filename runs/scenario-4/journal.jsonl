@@ -1,40 +1,39 @@
-{"ts": "2026-11-14T09:40:43", "source": "agent", "event": "launch", "args": [], "status": "new"}
-{"ts": "2026-11-14T09:40:43", "source": "agent", "event": "status_change", "from": "new", "to": "running", "why": "попытка 1"}
-{"ts": "2026-11-14T09:40:46", "source": "agent", "event": "llm_call", "input_tokens": 1749, "output_tokens": 54, "cost_usd_total": 0.000415}
-{"ts": "2026-11-14T09:40:46", "source": "agent", "event": "tool_start", "tool": "load_skill"}
-{"ts": "2026-11-14T09:40:46", "source": "agent", "event": "skill_loaded", "skill": "hackathon-relocation", "by": "model"}
-{"ts": "2026-11-14T09:40:47", "source": "agent", "event": "llm_call", "input_tokens": 2657, "output_tokens": 14, "cost_usd_total": 0.000963}
-{"ts": "2026-11-14T09:40:47", "source": "agent", "event": "tool_start", "tool": "get_status"}
-{"ts": "2026-11-14T09:40:47", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
-{"ts": "2026-11-14T09:40:49", "source": "agent", "event": "llm_call", "input_tokens": 2946, "output_tokens": 71, "cost_usd_total": 0.001637}
-{"ts": "2026-11-14T09:40:49", "source": "agent", "event": "tool_start", "tool": "list_venues"}
-{"ts": "2026-11-14T09:40:49", "source": "agent", "event": "tool_start", "tool": "read_inbox"}
-{"ts": "2026-11-14T09:40:49", "source": "agent", "event": "tool_start", "tool": "get_roster"}
-{"ts": "2026-11-14T09:40:49", "source": "mcp", "event": "tool_call", "tool": "list_venues", "status": "ok", "error": null, "venues": 4}
-{"ts": "2026-11-14T09:40:49", "source": "mcp", "event": "tool_call", "tool": "read_inbox", "status": "ok", "error": null, "messages": 4}
-{"ts": "2026-11-14T09:40:49", "source": "mcp", "event": "tool_call", "tool": "get_roster", "status": "ok", "error": null, "teams": 6, "mentors": 2}
-{"ts": "2026-11-14T09:40:50", "source": "agent", "event": "llm_call", "input_tokens": 7787, "output_tokens": 43, "cost_usd_total": 0.003246}
-{"ts": "2026-11-14T09:40:50", "source": "agent", "event": "tool_start", "tool": "book_venue"}
-{"ts": "2026-11-14T09:40:50", "source": "mcp", "event": "tool_call", "tool": "book_venue", "status": "approval_required", "error": "Бронь дороже порога, нужно решение оператора. Работа остановлена до его ответа.", "venue_id": "V-HUB"}
-{"ts": "2026-11-14T09:40:50", "source": "agent", "event": "status_change", "from": "running", "to": "waiting_approval", "why": "бронь V-HUB дороже порога, нужно решение оператора"}
-{"ts": "2026-11-14T09:40:52", "source": "agent", "event": "launch", "args": ["--approve"], "status": "waiting_approval"}
-{"ts": "2026-11-14T09:40:52", "source": "agent", "event": "operator_decision", "decision": "approve", "venue_id": "V-HUB"}
-{"ts": "2026-11-14T09:40:52", "source": "agent", "event": "status_change", "from": "waiting_approval", "to": "running", "why": "решение оператора: approve, попытка 1 продолжается"}
-{"ts": "2026-11-14T09:40:54", "source": "agent", "event": "llm_call", "input_tokens": 1763, "output_tokens": 80, "cost_usd_total": 0.003695}
-{"ts": "2026-11-14T09:40:54", "source": "agent", "event": "tool_start", "tool": "load_skill"}
-{"ts": "2026-11-14T09:40:54", "source": "agent", "event": "skill_loaded", "skill": "hackathon-relocation", "by": "model"}
-{"ts": "2026-11-14T09:40:56", "source": "agent", "event": "llm_call", "input_tokens": 2697, "output_tokens": 14, "cost_usd_total": 0.004251}
-{"ts": "2026-11-14T09:40:56", "source": "agent", "event": "tool_start", "tool": "get_status"}
-{"ts": "2026-11-14T09:40:56", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
-{"ts": "2026-11-14T09:40:58", "source": "agent", "event": "llm_call", "input_tokens": 2990, "output_tokens": 57, "cost_usd_total": 0.004917}
-{"ts": "2026-11-14T09:40:58", "source": "agent", "event": "tool_start", "tool": "list_venues"}
-{"ts": "2026-11-14T09:40:58", "source": "agent", "event": "tool_start", "tool": "read_inbox"}
-{"ts": "2026-11-14T09:40:58", "source": "agent", "event": "tool_start", "tool": "get_roster"}
-{"ts": "2026-11-14T09:40:58", "source": "mcp", "event": "tool_call", "tool": "list_venues", "status": "ok", "error": null, "venues": 4}
-{"ts": "2026-11-14T09:40:58", "source": "mcp", "event": "tool_call", "tool": "read_inbox", "status": "ok", "error": null, "messages": 4}
-{"ts": "2026-11-14T09:40:58", "source": "mcp", "event": "tool_call", "tool": "get_roster", "status": "ok", "error": null, "teams": 6, "mentors": 2}
-{"ts": "2026-11-14T09:41:00", "source": "agent", "event": "llm_call", "input_tokens": 7817, "output_tokens": 101, "cost_usd_total": 0.006602}
-{"ts": "2026-11-14T09:41:00", "source": "agent", "event": "tool_start", "tool": "book_venue"}
-{"ts": "2026-11-14T09:41:00", "source": "mcp", "event": "tool_call", "tool": "book_venue", "status": "venue_refused", "error": "Площадка отказала в брони: залы заняты или закрыты.", "venue_id": "V-HUB"}
-{"ts": "2026-11-14T09:41:00", "source": "agent", "event": "audit", "problems": ["площадка не забронирована", "команды без слотов: T-01, T-02, T-03, T-04, T-05, T-06", "нет уведомления для: T-01, T-02, T-03, T-04, T-05, T-06, M-01, M-02"]}
-{"ts": "2026-11-14T09:41:00", "source": "agent", "event": "status_change", "from": "running", "to": "needs_attention", "why": "Площадка V-HUB отказала в брони. Подходящих по регламенту площадок не осталось, перенос требует человека."}
+{"ts": "2026-11-14T09:49:57", "source": "agent", "event": "launch", "args": [], "status": "new"}
+{"ts": "2026-11-14T09:49:57", "source": "agent", "event": "status_change", "from": "new", "to": "running", "why": "попытка 1"}
+{"ts": "2026-11-14T09:49:59", "source": "agent", "event": "llm_call", "input_tokens": 1749, "output_tokens": 88, "cost_usd_total": 0.000455}
+{"ts": "2026-11-14T09:49:59", "source": "agent", "event": "tool_start", "tool": "load_skill"}
+{"ts": "2026-11-14T09:49:59", "source": "agent", "event": "skill_loaded", "skill": "hackathon-relocation", "by": "model"}
+{"ts": "2026-11-14T09:50:01", "source": "agent", "event": "llm_call", "input_tokens": 2691, "output_tokens": 68, "cost_usd_total": 0.001075}
+{"ts": "2026-11-14T09:50:01", "source": "agent", "event": "tool_start", "tool": "get_status"}
+{"ts": "2026-11-14T09:50:01", "source": "agent", "event": "tool_start", "tool": "list_venues"}
+{"ts": "2026-11-14T09:50:01", "source": "agent", "event": "tool_start", "tool": "read_inbox"}
+{"ts": "2026-11-14T09:50:01", "source": "agent", "event": "tool_start", "tool": "get_roster"}
+{"ts": "2026-11-14T09:50:01", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
+{"ts": "2026-11-14T09:50:01", "source": "mcp", "event": "tool_call", "tool": "list_venues", "status": "ok", "error": null, "venues": 4}
+{"ts": "2026-11-14T09:50:01", "source": "mcp", "event": "tool_call", "tool": "read_inbox", "status": "ok", "error": null, "messages": 4}
+{"ts": "2026-11-14T09:50:01", "source": "mcp", "event": "tool_call", "tool": "get_roster", "status": "ok", "error": null, "teams": 6, "mentors": 2}
+{"ts": "2026-11-14T09:50:03", "source": "agent", "event": "llm_call", "input_tokens": 7802, "output_tokens": 47, "cost_usd_total": 0.002692}
+{"ts": "2026-11-14T09:50:03", "source": "agent", "event": "tool_start", "tool": "book_venue"}
+{"ts": "2026-11-14T09:50:03", "source": "mcp", "event": "tool_call", "tool": "book_venue", "status": "approval_required", "error": "Бронь дороже порога, нужно решение оператора. Работа остановлена до его ответа.", "venue_id": "V-HUB"}
+{"ts": "2026-11-14T09:50:03", "source": "agent", "event": "status_change", "from": "running", "to": "waiting_approval", "why": "бронь V-HUB дороже порога, нужно решение оператора"}
+{"ts": "2026-11-14T09:50:04", "source": "agent", "event": "launch", "args": ["--approve"], "status": "waiting_approval"}
+{"ts": "2026-11-14T09:50:04", "source": "agent", "event": "operator_decision", "decision": "approve", "venue_id": "V-HUB"}
+{"ts": "2026-11-14T09:50:04", "source": "agent", "event": "status_change", "from": "waiting_approval", "to": "running", "why": "решение оператора: approve, попытка 1 продолжается"}
+{"ts": "2026-11-14T09:50:07", "source": "agent", "event": "llm_call", "input_tokens": 1763, "output_tokens": 82, "cost_usd_total": 0.003143}
+{"ts": "2026-11-14T09:50:07", "source": "agent", "event": "tool_start", "tool": "load_skill"}
+{"ts": "2026-11-14T09:50:07", "source": "agent", "event": "skill_loaded", "skill": "hackathon-relocation", "by": "model"}
+{"ts": "2026-11-14T09:50:08", "source": "agent", "event": "llm_call", "input_tokens": 2699, "output_tokens": 14, "cost_usd_total": 0.0037}
+{"ts": "2026-11-14T09:50:08", "source": "agent", "event": "tool_start", "tool": "get_status"}
+{"ts": "2026-11-14T09:50:08", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
+{"ts": "2026-11-14T09:50:10", "source": "agent", "event": "llm_call", "input_tokens": 2992, "output_tokens": 57, "cost_usd_total": 0.004366}
+{"ts": "2026-11-14T09:50:10", "source": "agent", "event": "tool_start", "tool": "list_venues"}
+{"ts": "2026-11-14T09:50:10", "source": "agent", "event": "tool_start", "tool": "read_inbox"}
+{"ts": "2026-11-14T09:50:10", "source": "agent", "event": "tool_start", "tool": "get_roster"}
+{"ts": "2026-11-14T09:50:10", "source": "mcp", "event": "tool_call", "tool": "list_venues", "status": "ok", "error": null, "venues": 4}
+{"ts": "2026-11-14T09:50:10", "source": "mcp", "event": "tool_call", "tool": "read_inbox", "status": "ok", "error": null, "messages": 4}
+{"ts": "2026-11-14T09:50:10", "source": "mcp", "event": "tool_call", "tool": "get_roster", "status": "ok", "error": null, "teams": 6, "mentors": 2}
+{"ts": "2026-11-14T09:50:12", "source": "agent", "event": "llm_call", "input_tokens": 7819, "output_tokens": 56, "cost_usd_total": 0.005997}
+{"ts": "2026-11-14T09:50:12", "source": "agent", "event": "tool_start", "tool": "book_venue"}
+{"ts": "2026-11-14T09:50:12", "source": "mcp", "event": "tool_call", "tool": "book_venue", "status": "venue_refused", "error": "Площадка отказала в брони: залы заняты или закрыты.", "venue_id": "V-HUB"}
+{"ts": "2026-11-14T09:50:12", "source": "agent", "event": "audit", "problems": ["площадка не забронирована", "команды без слотов: T-01, T-02, T-03, T-04, T-05, T-06", "нет уведомления для: T-01, T-02, T-03, T-04, T-05, T-06, M-01, M-02"]}
+{"ts": "2026-11-14T09:50:12", "source": "agent", "event": "status_change", "from": "running", "to": "needs_attention", "why": "Площадка V-HUB отказала в брони. Подходящих по регламенту площадок не осталось, перенос требует человека."}

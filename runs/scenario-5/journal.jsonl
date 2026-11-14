@@ -1,52 +1,52 @@
-{"ts": "2026-11-14T09:41:01", "source": "agent", "event": "launch", "args": [], "status": "new"}
-{"ts": "2026-11-14T09:41:01", "source": "agent", "event": "status_change", "from": "new", "to": "running", "why": "попытка 1"}
-{"ts": "2026-11-14T09:41:04", "source": "agent", "event": "llm_call", "input_tokens": 1749, "output_tokens": 79, "cost_usd_total": 0.000445}
-{"ts": "2026-11-14T09:41:04", "source": "agent", "event": "tool_start", "tool": "load_skill"}
-{"ts": "2026-11-14T09:41:04", "source": "agent", "event": "skill_loaded", "skill": "hackathon-relocation", "by": "model"}
-{"ts": "2026-11-14T09:41:05", "source": "agent", "event": "llm_call", "input_tokens": 2682, "output_tokens": 14, "cost_usd_total": 0.000998}
-{"ts": "2026-11-14T09:41:05", "source": "agent", "event": "tool_start", "tool": "get_status"}
-{"ts": "2026-11-14T09:41:05", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
-{"ts": "2026-11-14T09:41:07", "source": "agent", "event": "llm_call", "input_tokens": 2971, "output_tokens": 71, "cost_usd_total": 0.001677}
-{"ts": "2026-11-14T09:41:07", "source": "agent", "event": "tool_start", "tool": "list_venues"}
-{"ts": "2026-11-14T09:41:07", "source": "agent", "event": "tool_start", "tool": "read_inbox"}
-{"ts": "2026-11-14T09:41:07", "source": "agent", "event": "tool_start", "tool": "get_roster"}
-{"ts": "2026-11-14T09:41:07", "source": "mcp", "event": "tool_call", "tool": "list_venues", "status": "ok", "error": null, "venues": 4}
-{"ts": "2026-11-14T09:41:07", "source": "mcp", "event": "tool_call", "tool": "read_inbox", "status": "ok", "error": null, "messages": 7}
-{"ts": "2026-11-14T09:41:07", "source": "mcp", "event": "tool_call", "tool": "get_roster", "status": "ok", "error": null, "teams": 6, "mentors": 2}
-{"ts": "2026-11-14T09:41:08", "source": "agent", "event": "llm_call", "input_tokens": 10023, "output_tokens": 56, "cost_usd_total": 0.003749}
-{"ts": "2026-11-14T09:41:08", "source": "agent", "event": "tool_start", "tool": "book_venue"}
-{"ts": "2026-11-14T09:41:08", "source": "mcp", "event": "tool_call", "tool": "book_venue", "status": "approval_required", "error": "Бронь дороже порога, нужно решение оператора. Работа остановлена до его ответа.", "venue_id": "V-HUB"}
-{"ts": "2026-11-14T09:41:08", "source": "agent", "event": "status_change", "from": "running", "to": "waiting_approval", "why": "бронь V-HUB дороже порога, нужно решение оператора"}
-{"ts": "2026-11-14T09:41:09", "source": "agent", "event": "launch", "args": ["--approve"], "status": "waiting_approval"}
-{"ts": "2026-11-14T09:41:09", "source": "agent", "event": "operator_decision", "decision": "approve", "venue_id": "V-HUB"}
-{"ts": "2026-11-14T09:41:09", "source": "agent", "event": "status_change", "from": "waiting_approval", "to": "running", "why": "решение оператора: approve, попытка 1 продолжается"}
-{"ts": "2026-11-14T09:41:11", "source": "agent", "event": "llm_call", "input_tokens": 1763, "output_tokens": 47, "cost_usd_total": 0.004158}
-{"ts": "2026-11-14T09:41:11", "source": "agent", "event": "tool_start", "tool": "load_skill"}
-{"ts": "2026-11-14T09:41:11", "source": "agent", "event": "skill_loaded", "skill": "hackathon-relocation", "by": "model"}
-{"ts": "2026-11-14T09:41:13", "source": "agent", "event": "llm_call", "input_tokens": 2664, "output_tokens": 68, "cost_usd_total": 0.004772}
-{"ts": "2026-11-14T09:41:13", "source": "agent", "event": "tool_start", "tool": "get_status"}
-{"ts": "2026-11-14T09:41:13", "source": "agent", "event": "tool_start", "tool": "list_venues"}
-{"ts": "2026-11-14T09:41:13", "source": "agent", "event": "tool_start", "tool": "read_inbox"}
-{"ts": "2026-11-14T09:41:13", "source": "agent", "event": "tool_start", "tool": "get_roster"}
-{"ts": "2026-11-14T09:41:13", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
-{"ts": "2026-11-14T09:41:13", "source": "mcp", "event": "tool_call", "tool": "list_venues", "status": "ok", "error": null, "venues": 4}
-{"ts": "2026-11-14T09:41:13", "source": "mcp", "event": "tool_call", "tool": "read_inbox", "status": "ok", "error": null, "messages": 7}
-{"ts": "2026-11-14T09:41:13", "source": "mcp", "event": "tool_call", "tool": "get_roster", "status": "ok", "error": null, "teams": 6, "mentors": 2}
-{"ts": "2026-11-14T09:41:15", "source": "agent", "event": "llm_call", "input_tokens": 9990, "output_tokens": 34, "cost_usd_total": 0.006811}
-{"ts": "2026-11-14T09:41:15", "source": "agent", "event": "tool_start", "tool": "book_venue"}
-{"ts": "2026-11-14T09:41:15", "source": "mcp", "event": "tool_call", "tool": "book_venue", "status": "booked", "error": null, "venue_id": "V-HUB"}
-{"ts": "2026-11-14T09:41:19", "source": "agent", "event": "llm_call", "input_tokens": 10155, "output_tokens": 379, "cost_usd_total": 0.009297}
-{"ts": "2026-11-14T09:41:19", "source": "agent", "event": "tool_start", "tool": "assign_slots"}
-{"ts": "2026-11-14T09:41:19", "source": "mcp", "event": "tool_call", "tool": "assign_slots", "status": "ok", "error": null, "results": [{"team_id": "T-01", "hall_id": "H-HUB-AI", "mentor_id": "M-01", "mentor_slot": "11:00-11:30", "pitch_slot": "16:00-16:15", "status": "assigned"}, {"team_id": "T-02", "hall_id": "H-HUB-AI", "mentor_id": "M-01", "mentor_slot": "11:30-12:00", "pitch_slot": "16:15-16:30", "status": "assigned"}, {"team_id": "T-03", "hall_id": "H-HUB-AI", "mentor_id": "M-01", "mentor_slot": "12:00-12:30", "pitch_slot": "16:30-16:45", "status": "assigned"}, {"team_id": "T-04", "hall_id": "H-HUB-FIN", "mentor_id": "M-02", "mentor_slot": "11:00-11:30", "pitch_slot": "16:00-16:15", "status": "assigned"}, {"team_id": "T-05", "hall_id": "H-HUB-FIN", "mentor_id": "M-02", "mentor_slot": "11:30-12:00", "pitch_slot": "16:15-16:30", "status": "assigned"}, {"team_id": "T-06", "hall_id": "H-HUB-FIN", "mentor_id": "M-02", "mentor_slot": "12:00-12:30", "pitch_slot": "16:30-16:45", "status": "assigned"}]}
-{"ts": "2026-11-14T09:41:21", "source": "agent", "event": "llm_call", "input_tokens": 10691, "output_tokens": 28, "cost_usd_total": 0.011469}
-{"ts": "2026-11-14T09:41:21", "source": "agent", "event": "tool_start", "tool": "get_status"}
-{"ts": "2026-11-14T09:41:21", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 1, "slots": 6, "notifications": 0}
-{"ts": "2026-11-14T09:41:25", "source": "agent", "event": "llm_call", "input_tokens": 11495, "output_tokens": 488, "cost_usd_total": 0.014353}
-{"ts": "2026-11-14T09:41:25", "source": "agent", "event": "tool_start", "tool": "send_notifications"}
-{"ts": "2026-11-14T09:41:25", "source": "mcp", "event": "tool_call", "tool": "send_notifications", "status": "ok", "error": null, "results": [{"recipient": "aidar@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона: расписание T-01"}, {"recipient": "dana@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона: расписание T-02"}, {"recipient": "yerzhan@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона: расписание T-03"}, {"recipient": "alia@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона: расписание T-04"}, {"recipient": "timur@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона: расписание T-05"}, {"recipient": "madina@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона: расписание T-06"}, {"recipient": "asset@mentors.hack.kz", "status": "sent", "subject": "Перенос хакатона: расписание ментора"}, {"recipient": "dinara@mentors.hack.kz", "status": "sent", "subject": "Перенос хакатона: расписание ментора"}]}
-{"ts": "2026-11-14T09:41:27", "source": "agent", "event": "llm_call", "input_tokens": 12206, "output_tokens": 45, "cost_usd_total": 0.016849}
-{"ts": "2026-11-14T09:41:27", "source": "agent", "event": "tool_start", "tool": "get_status"}
-{"ts": "2026-11-14T09:41:27", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 1, "slots": 6, "notifications": 8}
-{"ts": "2026-11-14T09:41:31", "source": "agent", "event": "llm_call", "input_tokens": 13689, "output_tokens": 398, "cost_usd_total": 0.020064}
-{"ts": "2026-11-14T09:41:31", "source": "agent", "event": "audit", "problems": []}
-{"ts": "2026-11-14T09:41:31", "source": "agent", "event": "status_change", "from": "running", "to": "done", "why": "сверка файлов мира прошла"}
+{"ts": "2026-11-14T09:50:13", "source": "agent", "event": "launch", "args": [], "status": "new"}
+{"ts": "2026-11-14T09:50:13", "source": "agent", "event": "status_change", "from": "new", "to": "running", "why": "попытка 1"}
+{"ts": "2026-11-14T09:50:16", "source": "agent", "event": "llm_call", "input_tokens": 1749, "output_tokens": 69, "cost_usd_total": 0.000433}
+{"ts": "2026-11-14T09:50:16", "source": "agent", "event": "tool_start", "tool": "load_skill"}
+{"ts": "2026-11-14T09:50:16", "source": "agent", "event": "skill_loaded", "skill": "hackathon-relocation", "by": "model"}
+{"ts": "2026-11-14T09:50:17", "source": "agent", "event": "llm_call", "input_tokens": 2672, "output_tokens": 14, "cost_usd_total": 0.000984}
+{"ts": "2026-11-14T09:50:17", "source": "agent", "event": "tool_start", "tool": "get_status"}
+{"ts": "2026-11-14T09:50:17", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
+{"ts": "2026-11-14T09:50:19", "source": "agent", "event": "llm_call", "input_tokens": 2961, "output_tokens": 69, "cost_usd_total": 0.001659}
+{"ts": "2026-11-14T09:50:19", "source": "agent", "event": "tool_start", "tool": "list_venues"}
+{"ts": "2026-11-14T09:50:19", "source": "agent", "event": "tool_start", "tool": "read_inbox"}
+{"ts": "2026-11-14T09:50:19", "source": "agent", "event": "tool_start", "tool": "get_roster"}
+{"ts": "2026-11-14T09:50:19", "source": "mcp", "event": "tool_call", "tool": "list_venues", "status": "ok", "error": null, "venues": 4}
+{"ts": "2026-11-14T09:50:19", "source": "mcp", "event": "tool_call", "tool": "read_inbox", "status": "ok", "error": null, "messages": 7}
+{"ts": "2026-11-14T09:50:19", "source": "mcp", "event": "tool_call", "tool": "get_roster", "status": "ok", "error": null, "teams": 6, "mentors": 2}
+{"ts": "2026-11-14T09:50:20", "source": "agent", "event": "llm_call", "input_tokens": 10011, "output_tokens": 44, "cost_usd_total": 0.003714}
+{"ts": "2026-11-14T09:50:20", "source": "agent", "event": "tool_start", "tool": "book_venue"}
+{"ts": "2026-11-14T09:50:20", "source": "mcp", "event": "tool_call", "tool": "book_venue", "status": "approval_required", "error": "Бронь дороже порога, нужно решение оператора. Работа остановлена до его ответа.", "venue_id": "V-HUB"}
+{"ts": "2026-11-14T09:50:20", "source": "agent", "event": "status_change", "from": "running", "to": "waiting_approval", "why": "бронь V-HUB дороже порога, нужно решение оператора"}
+{"ts": "2026-11-14T09:50:21", "source": "agent", "event": "launch", "args": ["--approve"], "status": "waiting_approval"}
+{"ts": "2026-11-14T09:50:21", "source": "agent", "event": "operator_decision", "decision": "approve", "venue_id": "V-HUB"}
+{"ts": "2026-11-14T09:50:21", "source": "agent", "event": "status_change", "from": "waiting_approval", "to": "running", "why": "решение оператора: approve, попытка 1 продолжается"}
+{"ts": "2026-11-14T09:50:24", "source": "agent", "event": "llm_call", "input_tokens": 1763, "output_tokens": 44, "cost_usd_total": 0.004119}
+{"ts": "2026-11-14T09:50:24", "source": "agent", "event": "tool_start", "tool": "load_skill"}
+{"ts": "2026-11-14T09:50:24", "source": "agent", "event": "skill_loaded", "skill": "hackathon-relocation", "by": "model"}
+{"ts": "2026-11-14T09:50:25", "source": "agent", "event": "llm_call", "input_tokens": 2661, "output_tokens": 82, "cost_usd_total": 0.00475}
+{"ts": "2026-11-14T09:50:25", "source": "agent", "event": "tool_start", "tool": "get_status"}
+{"ts": "2026-11-14T09:50:25", "source": "agent", "event": "tool_start", "tool": "list_venues"}
+{"ts": "2026-11-14T09:50:25", "source": "agent", "event": "tool_start", "tool": "read_inbox"}
+{"ts": "2026-11-14T09:50:25", "source": "agent", "event": "tool_start", "tool": "get_roster"}
+{"ts": "2026-11-14T09:50:25", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
+{"ts": "2026-11-14T09:50:25", "source": "mcp", "event": "tool_call", "tool": "list_venues", "status": "ok", "error": null, "venues": 4}
+{"ts": "2026-11-14T09:50:25", "source": "mcp", "event": "tool_call", "tool": "read_inbox", "status": "ok", "error": null, "messages": 7}
+{"ts": "2026-11-14T09:50:25", "source": "mcp", "event": "tool_call", "tool": "get_roster", "status": "ok", "error": null, "teams": 6, "mentors": 2}
+{"ts": "2026-11-14T09:50:27", "source": "agent", "event": "llm_call", "input_tokens": 10001, "output_tokens": 44, "cost_usd_total": 0.006803}
+{"ts": "2026-11-14T09:50:27", "source": "agent", "event": "tool_start", "tool": "book_venue"}
+{"ts": "2026-11-14T09:50:27", "source": "mcp", "event": "tool_call", "tool": "book_venue", "status": "booked", "error": null, "venue_id": "V-HUB"}
+{"ts": "2026-11-14T09:50:31", "source": "agent", "event": "llm_call", "input_tokens": 10176, "output_tokens": 403, "cost_usd_total": 0.009322}
+{"ts": "2026-11-14T09:50:31", "source": "agent", "event": "tool_start", "tool": "assign_slots"}
+{"ts": "2026-11-14T09:50:31", "source": "mcp", "event": "tool_call", "tool": "assign_slots", "status": "ok", "error": null, "results": [{"team_id": "T-01", "hall_id": "H-HUB-AI", "mentor_id": "M-01", "mentor_slot": "11:00-11:30", "pitch_slot": "16:00-16:15", "status": "assigned"}, {"team_id": "T-02", "hall_id": "H-HUB-AI", "mentor_id": "M-01", "mentor_slot": "11:30-12:00", "pitch_slot": "16:15-16:30", "status": "assigned"}, {"team_id": "T-03", "hall_id": "H-HUB-AI", "mentor_id": "M-01", "mentor_slot": "12:00-12:30", "pitch_slot": "16:30-16:45", "status": "assigned"}, {"team_id": "T-04", "hall_id": "H-HUB-FIN", "mentor_id": "M-02", "mentor_slot": "11:00-11:30", "pitch_slot": "16:00-16:15", "status": "assigned"}, {"team_id": "T-05", "hall_id": "H-HUB-FIN", "mentor_id": "M-02", "mentor_slot": "11:30-12:00", "pitch_slot": "16:15-16:30", "status": "assigned"}, {"team_id": "T-06", "hall_id": "H-HUB-FIN", "mentor_id": "M-02", "mentor_slot": "12:00-12:30", "pitch_slot": "16:30-16:45", "status": "assigned"}]}
+{"ts": "2026-11-14T09:50:33", "source": "agent", "event": "llm_call", "input_tokens": 10736, "output_tokens": 66, "cost_usd_total": 0.011548}
+{"ts": "2026-11-14T09:50:33", "source": "agent", "event": "tool_start", "tool": "get_status"}
+{"ts": "2026-11-14T09:50:33", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 1, "slots": 6, "notifications": 0}
+{"ts": "2026-11-14T09:50:39", "source": "agent", "event": "llm_call", "input_tokens": 11578, "output_tokens": 562, "cost_usd_total": 0.014538}
+{"ts": "2026-11-14T09:50:39", "source": "agent", "event": "tool_start", "tool": "send_notifications"}
+{"ts": "2026-11-14T09:50:39", "source": "mcp", "event": "tool_call", "tool": "send_notifications", "status": "ok", "error": null, "results": [{"recipient": "aidar@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона — расписание команды T-01"}, {"recipient": "dana@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона — расписание команды T-02"}, {"recipient": "yerzhan@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона — расписание команды T-03"}, {"recipient": "alia@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона — расписание команды T-04"}, {"recipient": "timur@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона — расписание команды T-05"}, {"recipient": "madina@teams.hack.kz", "status": "sent", "subject": "Перенос хакатона — расписание команды T-06"}, {"recipient": "asset@mentors.hack.kz", "status": "sent", "subject": "Перенос хакатона — расписание ментора M-01"}, {"recipient": "dinara@mentors.hack.kz", "status": "sent", "subject": "Перенос хакатона — расписание ментора M-02"}]}
+{"ts": "2026-11-14T09:50:41", "source": "agent", "event": "llm_call", "input_tokens": 12363, "output_tokens": 63, "cost_usd_total": 0.017086}
+{"ts": "2026-11-14T09:50:41", "source": "agent", "event": "tool_start", "tool": "get_status"}
+{"ts": "2026-11-14T09:50:41", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 1, "slots": 6, "notifications": 8}
+{"ts": "2026-11-14T09:50:45", "source": "agent", "event": "llm_call", "input_tokens": 14026, "output_tokens": 424, "cost_usd_total": 0.0204}
+{"ts": "2026-11-14T09:50:45", "source": "agent", "event": "audit", "problems": []}
+{"ts": "2026-11-14T09:50:45", "source": "agent", "event": "status_change", "from": "running", "to": "done", "why": "сверка файлов мира прошла"}
