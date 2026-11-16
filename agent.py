@@ -618,7 +618,11 @@ async def work(
                     return pause(state, launch.pause_venue)
                 problems = audit_world()
                 journal("agent", "audit", problems=problems)
-                if problems and not load_bookings() and not candidate_venues(state):
+                booked = load_bookings()
+                if booked:
+                    # Бронь дешевле порога проходит без паузы, поэтому площадку в состояние переносит сверка.
+                    state.selected_venue = booked[0].venue_id
+                if problems and not booked and not candidate_venues(state):
                     return finish(state, "needs_attention", no_venue_reason(state))
                 gaps = [] if problems or not state.skill_activated else bulletin_gaps(report)
                 if not problems and not gaps:

@@ -498,7 +498,8 @@ def book_venue(venue_id: VenueId) -> dict[str, Any]:
     except world.NoCapacityError:
         # Текст исключения приходит из сырого мира, дальше идёт только собственный код причины.
         return refuse("venue_refused", "Площадка отказала в брони: залы заняты или закрыты.")
-    booking = Booking.model_validate(record)
+    # Название площадки в запись подставляет сырой мир, поэтому ответ проходит ту же вторую линию.
+    booking = Booking.model_validate(scrub(record))
     return _reply("book_venue", "booked", log=log, booking=booking.model_dump(exclude={"idempotency_key"}))
 
 
@@ -636,7 +637,7 @@ def assign_slots(
             item.pitch_slot,
             idempotency_key=f"slot:{team.id}",
         )
-        schedule[team.id] = SlotEntry.model_validate(record)
+        schedule[team.id] = SlotEntry.model_validate(scrub(record))
         results.append({"team_id": team.id, "status": "assigned", "error": None})
 
     log_rows = [

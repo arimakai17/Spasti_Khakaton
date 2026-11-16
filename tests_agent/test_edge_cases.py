@@ -13,6 +13,7 @@ import world
 from mcp_server import Hall, Mentor, SlotAssignment, SlotEntry, SlotRules, Team, Venue, slot_refusal
 
 from .conftest import (
+    approve_in_state,
     book_approved,
     call,
     eligible_venue,
@@ -93,6 +94,8 @@ def test_refused_venue_with_alternative_does_not_end_the_task(run_dir: Path, mon
     saved = state(run_dir)
     assert saved["refused_venues"] == [broken] and saved["status"] == "failed"
     assert [b["venue_id"] for b in read_json(run_dir / "bookings.json")] == [spare]
+    # Бронь дешевле порога прошла без паузы: в состоянии стоит забронированная площадка, а не отказавшая.
+    assert saved["selected_venue"] == spare
 
 
 # --- Ошибки модели не роняют запуск ------------------------------------------------------
@@ -335,3 +338,24 @@ def test_token_inside_allowed_field_is_cut_out(run_dir: Path, monkeypatch):
     for path in [run_dir / "state.json", run_dir / "journal.jsonl", *run_dir.glob("sessions.db*")]:
         assert SECRET.encode() not in path.read_bytes(), path.name
     assert mcp_server.scrub({"a": [token, 1, None]}) == {"a": ["[скрыто]", 1, None]}
+
+
+def test_token_in_venue_name_does_not_reach_booking_reply(run_dir: Path):
+    """Название площадки в запись брони подставляет сырой мир, минуя чтение каталога инструментом."""
+    token = f"{SECRET}inline-0002"
+    venue = eligible_venue(run_dir)
+    path = run_dir / "data" / "venues.json"
+    records = read_json(path)
+    for record in records:
+        if record["id"] == venue["id"]:
+            record["name"] = f"{record['name']} {token}"
+    write_json(path, records)
+    approve_in_state(run_dir, eligible_venue(run_dir))
+
+    first = call("book_venue", venue_id=venue["id"])
+    again = call("book_venue", venue_id=venue["id"])
+
+    assert (first["status"], again["status"]) == ("booked", "already_booked")
+    assert "[скрыто]" in first["booking"]["venue_name"]
+    assert SECRET not in str(first) and SECRET not in str(again)
+    assert SECRET.encode() not in (run_dir / "journal.jsonl").read_bytes()
