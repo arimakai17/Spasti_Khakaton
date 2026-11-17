@@ -23,6 +23,7 @@ from .conftest import (
     statuses,
     venue_with,
     write_json,
+    write_state,
 )
 from .modified_world import SECRET
 from .test_harness import launch, state
@@ -96,6 +97,19 @@ def test_refused_venue_with_alternative_does_not_end_the_task(run_dir: Path, mon
     assert [b["venue_id"] for b in read_json(run_dir / "bookings.json")] == [spare]
     # Бронь дешевле порога прошла без паузы: в состоянии стоит забронированная площадка, а не отказавшая.
     assert saved["selected_venue"] == spare
+
+
+def test_attempt_limit_keeps_the_booked_venue_in_state(run_dir: Path, monkeypatch):
+    spare = open_second_venue(run_dir, cost_kzt=1)
+    assert call("book_venue", venue_id=spare)["status"] == "booked"
+    limit = read_json(run_dir / "data" / "config.json")["max_attempts"]
+    # Бронь записана, запуск упал до сверки: в состоянии площадки ещё нет, попытки кончились.
+    write_state(run_dir, status="running", attempts=limit)
+
+    launch(monkeypatch, [])
+
+    saved = state(run_dir)
+    assert saved["status"] == "failed" and saved["selected_venue"] == spare
 
 
 # --- Ошибки модели не роняют запуск ------------------------------------------------------

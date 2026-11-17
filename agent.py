@@ -156,6 +156,10 @@ def move(state: TaskState, status: Status, why: str) -> None:
 
 def finish(state: TaskState, status: Status, reason: str) -> None:
     state.reason = None if status == "done" else reason
+    booked = load_bookings()
+    if booked:
+        # Бронь дешевле порога проходит без паузы, поэтому площадку в состояние переносит итог запуска.
+        state.selected_venue = booked[0].venue_id
     move(state, status, reason)
 
 
@@ -342,7 +346,10 @@ def stop_at_operator_gate(
             launch.pause_venue = reply.get("venue_id")
             stop = True
         if reply.get("status") == "venue_refused":
-            launch.state.refused_venues.append(str(reply.get("venue_id")))
+            refused = str(reply.get("venue_id"))
+            launch.state.refused_venues.append(refused)
+            if launch.state.selected_venue == refused:
+                launch.state.selected_venue = None
             save_state(launch.state)
             stop = stop or not candidate_venues(launch.state)
     return ToolsToFinalOutputResult(is_final_output=stop, final_output="Работа остановлена обвязкой." if stop else None)
@@ -618,11 +625,7 @@ async def work(
                     return pause(state, launch.pause_venue)
                 problems = audit_world()
                 journal("agent", "audit", problems=problems)
-                booked = load_bookings()
-                if booked:
-                    # Бронь дешевле порога проходит без паузы, поэтому площадку в состояние переносит сверка.
-                    state.selected_venue = booked[0].venue_id
-                if problems and not booked and not candidate_venues(state):
+                if problems and not load_bookings() and not candidate_venues(state):
                     return finish(state, "needs_attention", no_venue_reason(state))
                 gaps = [] if problems or not state.skill_activated else bulletin_gaps(report)
                 if not problems and not gaps:

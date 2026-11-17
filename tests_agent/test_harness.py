@@ -119,6 +119,7 @@ def test_venue_refusal_ends_in_needs_attention(run_dir: Path, monkeypatch):
 
     saved = state(run_dir)
     assert saved["status"] == "needs_attention" and saved["refused_venues"] == [venue["id"]]
+    assert saved["selected_venue"] is None
     assert bookings(run_dir) == [] and len(model.calls) == 1
     raw_fault = next(v["fault"] for v in read_json(run_dir / "data" / "venues.json") if v.get("fault"))
     for name in ("state.json", "journal.jsonl"):
