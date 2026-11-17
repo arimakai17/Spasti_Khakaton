@@ -1,5 +1,6 @@
 """Случаи с границ: вторая площадка, ошибки модели, флаги конфига, записи в обход инструментов."""
 
+import json
 import sys
 from pathlib import Path
 
@@ -110,6 +111,30 @@ def test_attempt_limit_keeps_the_booked_venue_in_state(run_dir: Path, monkeypatc
 
     saved = state(run_dir)
     assert saved["status"] == "failed" and saved["selected_venue"] == spare
+
+
+def test_relaunch_after_crash_shows_the_booked_venue_to_the_model(run_dir: Path, monkeypatch):
+    spare = open_second_venue(run_dir, cost_kzt=1)
+    assert call("book_venue", venue_id=spare)["status"] == "booked"
+    # Бронь записана, запуск упал до завершения: в state.json площадки ещё нет.
+    write_state(run_dir, status="running", attempts=1)
+    ask = [function_call("get_status", {}, call_id="c-status")]
+
+    model = launch(monkeypatch, [ask, *[[assistant_message("Готово.")]] * 3])
+
+    seen = json.loads(model.calls[1].input[-1]["output"])
+    assert seen["task"]["selected_venue"] == spare
+
+
+def test_forbidden_transition_leaves_the_state_untouched(run_dir: Path):
+    spare = open_second_venue(run_dir, cost_kzt=1)
+    assert call("book_venue", venue_id=spare)["status"] == "booked"
+    task = agent.TaskState(status="done")
+
+    with pytest.raises(RuntimeError):
+        agent.finish(task, "running", "переход вне графа")
+
+    assert task.selected_venue is None and task.status == "done"
 
 
 # --- Ошибки модели не роняют запуск ------------------------------------------------------

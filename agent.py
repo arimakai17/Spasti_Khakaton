@@ -136,6 +136,11 @@ def load_state() -> TaskState:
 
 def save_state(state: TaskState) -> None:
     """Пишет state.json через временный файл: читатель видит старую или новую версию целиком."""
+    booked = load_bookings()
+    if booked:
+        # Бронь дешевле порога проходит без паузы, а запуск может упасть сразу после неё.
+        # Поэтому площадку из брони в состояние переносит каждая запись.
+        state.selected_venue = booked[0].venue_id
     tmp = world.STATE_PATH.with_suffix(".tmp")
     with tmp.open("w", encoding="utf-8") as stream:
         stream.write(state.model_dump_json(indent=2))
@@ -156,10 +161,6 @@ def move(state: TaskState, status: Status, why: str) -> None:
 
 def finish(state: TaskState, status: Status, reason: str) -> None:
     state.reason = None if status == "done" else reason
-    booked = load_bookings()
-    if booked:
-        # Бронь дешевле порога проходит без паузы, поэтому площадку в состояние переносит итог запуска.
-        state.selected_venue = booked[0].venue_id
     move(state, status, reason)
 
 
