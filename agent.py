@@ -149,19 +149,22 @@ def save_state(state: TaskState) -> None:
     os.replace(tmp, world.STATE_PATH)
 
 
-def move(state: TaskState, status: Status, why: str) -> None:
-    """Единственное место, где меняется статус. Переход вне графа считается ошибкой кода."""
+def move(state: TaskState, status: Status, why: str, reason: str | None = None) -> None:
+    """Единственное место, где меняется статус. Переход вне графа считается ошибкой кода.
+
+    Причина отказа записывается вместе с переходом: до проверки графа состояние не меняется.
+    """
     if status not in TRANSITIONS.get(state.status, set()):
         raise RuntimeError(f"Запрещённый переход статуса: {state.status} -> {status}")
     state.history.append({"ts": now(), "from": state.status, "to": status, "why": why})
     journal("agent", "status_change", **{"from": state.status, "to": status, "why": why})
     state.status = status
+    state.reason = reason
     save_state(state)
 
 
 def finish(state: TaskState, status: Status, reason: str) -> None:
-    state.reason = None if status == "done" else reason
-    move(state, status, reason)
+    move(state, status, reason, reason=None if status == "done" else reason)
 
 
 # --- Модель -------------------------------------------------------------------------------

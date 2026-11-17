@@ -134,7 +134,7 @@ def test_forbidden_transition_leaves_the_state_untouched(run_dir: Path):
     with pytest.raises(RuntimeError):
         agent.finish(task, "running", "переход вне графа")
 
-    assert task.selected_venue is None and task.status == "done"
+    assert task.selected_venue is None and task.reason is None and task.status == "done"
 
 
 # --- Ошибки модели не роняют запуск ------------------------------------------------------
