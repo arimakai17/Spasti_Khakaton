@@ -2,7 +2,7 @@
   "status": "needs_attention",
   "attempts": 1,
   "decision": "approve",
-  "selected_venue": "V-HUB",
+  "selected_venue": null,
   "skill_activated": true,
   "bulletin": null,
   "checkpoint": {
@@ -10,14 +10,14 @@
     "venue_id": "V-HUB",
     "venue_name": "Образовательный центр QazTech Hub",
     "cost_kzt": 350000,
-    "requested_at": "2026-11-16T23:29:24"
+    "requested_at": "2026-11-17T14:43:25"
   },
   "token_usage": {
     "model": "openai:gpt-5.6-luna",
     "requests": 8,
-    "input_tokens": 29920,
-    "output_tokens": 424,
-    "cost_usd": 0.006493
+    "input_tokens": 30000,
+    "output_tokens": 437,
+    "cost_usd": 0.006524
   },
   "reason": "Площадка V-HUB отказала в брони. Подходящих по регламенту площадок не осталось, перенос требует человека.",
   "rejected_venues": [],
@@ -26,25 +26,25 @@
   ],
   "history": [
     {
-      "ts": "2026-11-16T23:29:14",
+      "ts": "2026-11-17T14:43:15",
       "from": "new",
       "to": "running",
       "why": "попытка 1"
     },
     {
-      "ts": "2026-11-16T23:29:24",
+      "ts": "2026-11-17T14:43:25",
       "from": "running",
       "to": "waiting_approval",
       "why": "бронь V-HUB дороже порога, нужно решение оператора"
     },
     {
-      "ts": "2026-11-16T23:29:25",
+      "ts": "2026-11-17T14:43:27",
       "from": "waiting_approval",
       "to": "running",
       "why": "решение оператора: approve, попытка 1 продолжается"
     },
     {
-      "ts": "2026-11-16T23:29:35",
+      "ts": "2026-11-17T14:43:36",
       "from": "running",
       "to": "needs_attention",
       "why": "Площадка V-HUB отказала в брони. Подходящих по регламенту площадок не осталось, перенос требует человека."
