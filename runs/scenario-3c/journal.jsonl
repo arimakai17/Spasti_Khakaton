@@ -1,5 +1,5 @@
-{"ts": "2026-11-17T14:43:10", "source": "agent", "event": "launch", "args": ["--query", "Какой текущий статус и слот у одной команды T-01?"], "status": "new"}
-{"ts": "2026-11-17T14:43:12", "source": "agent", "event": "llm_call", "input_tokens": 300, "output_tokens": 37, "cost_usd_total": 0.000104}
-{"ts": "2026-11-17T14:43:12", "source": "agent", "event": "tool_start", "tool": "get_status"}
-{"ts": "2026-11-17T14:43:12", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
-{"ts": "2026-11-17T14:43:14", "source": "agent", "event": "llm_call", "input_tokens": 612, "output_tokens": 39, "cost_usd_total": 0.000274}
+{"ts": "2026-11-17T15:57:54", "source": "agent", "event": "launch", "args": ["--query", "Какой текущий статус и слот у одной команды T-01?"], "status": "new"}
+{"ts": "2026-11-17T15:57:57", "source": "agent", "event": "llm_call", "input_tokens": 300, "output_tokens": 43, "cost_usd_total": 0.000112}
+{"ts": "2026-11-17T15:57:57", "source": "agent", "event": "tool_start", "tool": "get_status"}
+{"ts": "2026-11-17T15:57:57", "source": "mcp", "event": "tool_call", "tool": "get_status", "status": "ok", "error": null, "bookings": 0, "slots": 0, "notifications": 0}
+{"ts": "2026-11-17T15:57:58", "source": "agent", "event": "llm_call", "input_tokens": 618, "output_tokens": 39, "cost_usd_total": 0.000282}
